@@ -1,0 +1,85 @@
+name: Build APK
+
+# Qo'lda ishga tushiriladi: Actions bo'limi -> Build APK -> Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      gradle_task:
+        description: "Gradle task (xato bersa, jurnaldagi ro'yxatdan to'g'risini tanlang)"
+        required: true
+        default: ":TMessagesProj_App:assembleAfatDebug"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      # GitHub serverida disk 14 GB atrofida, Telegram kodi katta.
+      # Keraksiz dasturlarni o'chirib joy ochamiz.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/ghc /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - name: Checkout (submodullar bilan)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Accept Android SDK licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Ixtiyoriy: o'z api_id / api_hash ni Settings -> Secrets and variables -> Actions
+      # ichiga TG_APP_ID va TG_APP_HASH nomi bilan qo'shsangiz, shu yerda kodga qo'yiladi.
+      # Qo'shmasangiz, repozitoriydagi sinov qiymatlari bilan yig'iladi.
+      - name: Patch api_id / api_hash (ixtiyoriy)
+        env:
+          TG_APP_ID: ${{ secrets.TG_APP_ID }}
+          TG_APP_HASH: ${{ secrets.TG_APP_HASH }}
+        run: |
+          F=TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+          if [ -n "$TG_APP_ID" ] && [ -n "$TG_APP_HASH" ]; then
+            if [[ "$TG_APP_ID" =~ ^[0-9]+$ ]] && [[ "$TG_APP_HASH" =~ ^[0-9a-fA-F]+$ ]]; then
+              sed -i -E "s/(APP_ID = )[0-9]+;/\1${TG_APP_ID};/" "$F"
+              sed -i -E "s/(APP_HASH = \")[0-9a-fA-F]*(\";)/\1${TG_APP_HASH}\2/" "$F"
+              echo "api_id/api_hash qo'yildi"
+            else
+              echo "TG_APP_ID yoki TG_APP_HASH formati noto'g'ri, o'tkazib yuborildi"
+            fi
+          else
+            echo "Secrets yo'q, sinov qiymatlari ishlatiladi"
+          fi
+
+      - name: Build
+        env:
+          GRADLE_TASK: ${{ inputs.gradle_task }}
+        run: |
+          chmod +x gradlew
+          ./gradlew "$GRADLE_TASK" --no-daemon --stacktrace
+
+      # Task nomi noto'g'ri bo'lsa, to'g'ri nomlarni ko'rsatadi
+      - name: List available tasks (faqat xatoda)
+        if: failure()
+        run: |
+          ./gradlew :TMessagesProj_App:tasks --all --no-daemon | grep -i assemble || true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FastMessenger-apk
+          path: |
+            **/build/outputs/apk/**/*.apk
+          if-no-files-found: error
