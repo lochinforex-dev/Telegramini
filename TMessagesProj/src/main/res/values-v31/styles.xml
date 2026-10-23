@@ -28,9 +28,9 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:textViewStyle">@style/MyTextViewStyle</item>
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowtg_fm_splash_320ScreenAnimatedIcon">@drawable/fm_splash</item>
-        <item name="android:windowfm_splashScreenAnimationDuration">@integer/fm_splash_screen_duration</item>
-        <item name="android:windowfm_splashScreenBackground">?android:windowBackground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/fm_splash</item>
+        <item name="android:windowSplashScreenAnimationDuration">@integer/fm_splash_screen_duration</item>
+        <item name="android:windowSplashScreenBackground">?android:windowBackground</item>
     </style>
 
     <style name="Theme.TMessages" parent="Theme.AppCompat.Light">
