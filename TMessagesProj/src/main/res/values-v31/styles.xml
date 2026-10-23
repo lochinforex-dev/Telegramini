@@ -16,7 +16,7 @@
 
 <resources>
 
-    <style name="tg_fm_splash_320" parent="Theme.AppCompat.Light">
+    <style name="fm_splash" parent="Theme.AppCompat.Light">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:actionBarStyle">@style/ActionBar.Transparent.TMessages.Start</item>
