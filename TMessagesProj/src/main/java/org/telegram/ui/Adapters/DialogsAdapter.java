@@ -110,7 +110,8 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             VIEW_TYPE_GRAY_SECTION = 20,
             VIEW_TYPE_FORWARD_TO_STORIES_CELL = 21,
             VIEW_TYPE_HEADER_3 = 22,
-            VIEW_TYPE_DIALOG_COMMUNITY = 23;
+            VIEW_TYPE_DIALOG_COMMUNITY = 23,
+            VIEW_TYPE_AD_STRIP = 24;
 
     private Context mContext;
     private ArchiveHintCell archiveHintCell;
@@ -128,6 +129,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
     private ArrayList<Long> selectedDialogs;
     private boolean hasHints;
     private boolean hasChatlistHint;
+    private int adBannerPosition = -1;
     private int currentAccount;
     private boolean dialogsListFrozen;
     private boolean isReordering;
@@ -182,6 +184,9 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
     }
 
     public int fixPosition(int position) {
+        if (adBannerPosition >= 0 && position > adBannerPosition) {
+            position--;
+        }
         if (hasChatlistHint) {
             position--;
         }
@@ -639,7 +644,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         return viewType != VIEW_TYPE_FLICKER && viewType != VIEW_TYPE_EMPTY && viewType != VIEW_TYPE_DIVIDER &&
                 viewType != VIEW_TYPE_SHADOW && viewType != VIEW_TYPE_HEADER &&
                 viewType != VIEW_TYPE_LAST_EMPTY && viewType != VIEW_TYPE_NEW_CHAT_HINT && viewType != VIEW_TYPE_CONTACTS_FLICKER &&
-                viewType != VIEW_TYPE_REQUIREMENTS && viewType != VIEW_TYPE_REQUIRED_EMPTY && viewType != VIEW_TYPE_STORIES && viewType != VIEW_TYPE_ARCHIVE_FULLSCREEN && viewType != VIEW_TYPE_GRAY_SECTION;
+                viewType != VIEW_TYPE_REQUIREMENTS && viewType != VIEW_TYPE_REQUIRED_EMPTY && viewType != VIEW_TYPE_STORIES && viewType != VIEW_TYPE_ARCHIVE_FULLSCREEN && viewType != VIEW_TYPE_GRAY_SECTION && viewType != VIEW_TYPE_AD_STRIP;
     }
 
     @Override
@@ -843,6 +848,9 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             }
             case VIEW_TYPE_FOLDER_UPDATE_HINT:
                 view = new DialogsHintCell(mContext);
+                break;
+            case VIEW_TYPE_AD_STRIP:
+                view = new org.telegram.ui.Cells.AdStripCell(mContext);
                 break;
             case VIEW_TYPE_STORIES: {
                 view = new View(mContext) {
@@ -1164,6 +1172,10 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             case VIEW_TYPE_REQUIREMENTS: {
                 RequestPeerRequirementsCell cell = (RequestPeerRequirementsCell) holder.itemView;
                 cell.set(requestPeerType);
+                break;
+            }
+            case VIEW_TYPE_AD_STRIP: {
+                ((org.telegram.ui.Cells.AdStripCell) holder.itemView).update();
                 break;
             }
             case VIEW_TYPE_FOLDER_UPDATE_HINT: {
@@ -1611,6 +1623,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         }
 
         itemInternals.clear();
+        adBannerPosition = -1;
         updateHasHints();
 
         MessagesController messagesController = MessagesController.getInstance(currentAccount);
@@ -1771,7 +1784,14 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         }
 
         if (!stopUpdate) {
+            // Own ad strip: only on the main "All" list, right below the (hidden) archive row.
+            final boolean showAdStrip = shouldShowAdStrip(filter) && !array.isEmpty();
+            final int adStripIndex = showAdStrip && array.get(0).isFolder ? 1 : 0;
             for (int k = 0; k < array.size(); k++) {
+                if (showAdStrip && k == adStripIndex) {
+                    itemInternals.add(new ItemInternal(VIEW_TYPE_AD_STRIP));
+                    adBannerPosition = itemInternals.size() - 1;
+                }
                 if (dialogsType == DialogsActivity.DIALOGS_TYPE_ADD_USERS_TO && array.get(k) instanceof DialogsActivity.DialogsHeader) {
                     itemInternals.add(new ItemInternal(VIEW_TYPE_HEADER_2, array.get(k)));
                 } else {
@@ -1808,6 +1828,54 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 }
             }
         }
+    }
+
+    // The strip is shown on the main "All" list and on folders that include groups or channels.
+    private boolean isAdStripPage(MessagesController.DialogFilter filter) {
+        if (dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT) {
+            return filter == null || filter.isDefault();
+        }
+        if (dialogsType == 7 || dialogsType == 8) {
+            return filter != null
+                    && !filter.isDefault()
+                    && !filter.isChatlist()
+                    && (filter.flags & (MessagesController.DIALOG_FILTER_FLAG_GROUPS | MessagesController.DIALOG_FILTER_FLAG_CHANNELS)) != 0;
+        }
+        return false;
+    }
+
+    private boolean shouldShowAdStrip(MessagesController.DialogFilter filter) {
+        return folderId == 0
+                && isAdStripPage(filter)
+                && !isOnlySelect
+                && requestPeerType == null
+                && !collapsedView
+                && !isTransitionSupport
+                && !hasHints
+                && parentFragment != null
+                && !parentFragment.isArchive()
+                && org.telegram.messenger.AdBannerController.getInstance().hasAds();
+    }
+
+    private final Runnable adsLoadedListener = () -> {
+        if (parentFragment != null) {
+            updateList(null);
+        }
+    };
+
+    @Override
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        if (folderId == 0 && (dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT || dialogsType == 7 || dialogsType == 8) && !isOnlySelect) {
+            org.telegram.messenger.AdBannerController.getInstance().addListener(adsLoadedListener);
+            org.telegram.messenger.AdBannerController.getInstance().load();
+        }
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        org.telegram.messenger.AdBannerController.getInstance().removeListener(adsLoadedListener);
     }
 
     public int getItemHeight(int position) {
