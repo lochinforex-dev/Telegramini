@@ -823,7 +823,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             return new ContactsActivity(args);
         } else if (position == POSITION_CALENDAR) {
             // NEW: Calendar tab
-            return new CalendarActivity();
+            return new CalendarTabActivity();
         } else if (position == POSITION_CALLS_OR_SETTINGS) {
             if (getUserConfig().showCallsTab) {
                 Bundle args = new Bundle();
