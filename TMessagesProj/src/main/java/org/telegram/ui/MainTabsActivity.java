@@ -321,7 +321,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabs[INDEX_CHATS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CHATS, R.string.MainTabsChats);
         tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsContacts);
         // NEW: Calendar tab (icon temporarily reuses the Contacts animation)
-        tabs[INDEX_CALENDAR] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsCalendar);
+        tabs[INDEX_CALENDAR] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CALENDAR, R.string.MainTabsCalendar);
+        // label follows the Telegram app language (Taqvim / Календарь / Calendar)
+        tabs[INDEX_CALENDAR].setText(CalendarTabActivity.getCalendarTitle());
         tabs[INDEX_SETTINGS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.SETTINGS, R.string.Settings);
         tabs[INDEX_CALLS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CALLS, R.string.MainTabsCalls);
         tabs[INDEX_PROFILE] = GlassTabView.createAvatar(context, resourceProvider, currentAccount, R.string.MainTabsProfile);
