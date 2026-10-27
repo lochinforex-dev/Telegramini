@@ -230,6 +230,50 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         super.clearViews();
     }
 
+    private void showPrivacyPolicyDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder policyBuilder = new AlertDialog.Builder(getParentActivity(), resourceProvider);
+        policyBuilder.setTitle("Privacy Policy");
+        policyBuilder.setMessage(
+                "FastMessenger is an UNOFFICIAL messaging client. It is built on the open-source code of Telegram for Android and uses the Telegram API. It is not made, endorsed or supported by Telegram FZ-LLC.\n" +
+                "\n" +
+                "Developer: LOCHINBEKJON\n" +
+                "Contact: Telegram @DilmurodovLochinbek\n" +
+                "\n" +
+                "1. How your data is handled\n" +
+                "The app connects directly to Telegram's servers. Your phone number, messages, media, contacts, groups, channels and account settings are sent to and stored by Telegram, and are handled according to Telegram's own Privacy Policy (telegram.org/privacy).\n" +
+                "\n" +
+                "The developer does not operate its own servers for messages and does not receive, read, store or sell your messages, contacts or other personal content. The developer does not add its own analytics or tracking code to the app.\n" +
+                "\n" +
+                "2. Advertising\n" +
+                "The app can show a small \"Reklama\" strip with the developer's own advertisements. The list of advertisements is downloaded from the developer's Firebase Realtime Database; this request contains no account information. Public Telegram channels may also show official sponsored messages provided by Telegram.\n" +
+                "\n" +
+                "3. Data stored on your device\n" +
+                "Like the original client, the app stores data locally on your device so that it can work: a cache of chats and media, account sessions and app settings. You can clear this data at any time from the app's settings or by removing the app.\n" +
+                "\n" +
+                "4. Permissions\n" +
+                "The app may ask for permissions such as contacts, storage, camera, microphone, location and notifications. They are used only for the features you choose to use.\n" +
+                "\n" +
+                "5. Notifications\n" +
+                "Like the original client, the app can use Google Firebase Cloud Messaging to deliver push notifications. This service is provided by Google and is subject to Google's Privacy Policy.\n" +
+                "\n" +
+                "6. Children\n" +
+                "The app is not intended for children under the minimum age required by Telegram's Terms of Service.\n" +
+                "\n" +
+                "7. Open source\n" +
+                "The app is distributed under the GNU GPL v2 (or later), like the Telegram for Android source code it is based on. The source code is available on request from the developer.\n" +
+                "\n" +
+                "8. Changes\n" +
+                "If this policy changes, the new version will be included in an app update.\n" +
+                "\n" +
+                "Last updated: 25 October 2026"
+);
+        policyBuilder.setPositiveButton(LocaleController.getString(R.string.OK), null);
+        showDialog(policyBuilder.create());
+    }
+
     @Override
     public View createView(Context context) {
         contentView = new SizeNotifierFrameLayout(context) {
@@ -849,7 +893,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 Browser.openUrl(getParentActivity(), LocaleController.getString(R.string.TelegramFaqUrl));
                 break;
             case 19:
-                Browser.openUrl(getParentActivity(), "https://github.com/lochinforex-dev/Telegramini/blob/master/PRIVACY_POLICY.md");
+                showPrivacyPolicyDialog();
                 break;
 
             case 20:
