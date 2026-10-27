@@ -31,7 +31,7 @@ import java.util.List;
 public class AdBannerController {
 
     // TODO: put your own Realtime Database address here (it must end with "/.json").
-    public static final String ADS_DB_URL = "https://YOUR-PROJECT-default-rtdb.firebaseio.com/.json";
+    public static final String ADS_DB_URL = "https://fastmessenger-ads-default-rtdb.firebaseio.com/.json";
 
     private static final int MAX_ADS = 2;
     private static final int MAX_TEXT_LENGTH = 90;
