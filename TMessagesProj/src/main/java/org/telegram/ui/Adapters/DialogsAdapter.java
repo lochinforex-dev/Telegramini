@@ -130,6 +130,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
     private boolean hasHints;
     private boolean hasChatlistHint;
     private int adBannerPosition = -1;
+    private static final int AD_STRIP_HEIGHT_DP = 28;
     private int currentAccount;
     private boolean dialogsListFrozen;
     private boolean isReordering;
@@ -1521,6 +1522,8 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                         }
                     } else  if (itemInternals.get(i).viewType == VIEW_TYPE_FLICKER) {
                         dialogsHeight += cellHeight;
+                    } else if (itemInternals.get(i).viewType == VIEW_TYPE_AD_STRIP) {
+                        dialogsHeight += AndroidUtilities.dp(AD_STRIP_HEIGHT_DP);
                     }
                 }
                 dialogsHeight += size - 1;
@@ -1885,6 +1888,9 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             } else {
                 return AndroidUtilities.dp(SharedConfig.useThreeLinesLayout ? 76 : 70) + 1;
             }
+        }
+        if (itemInternals.get(position).viewType == VIEW_TYPE_AD_STRIP) {
+            return AndroidUtilities.dp(AD_STRIP_HEIGHT_DP) + 1;
         }
         return 0;
     }
