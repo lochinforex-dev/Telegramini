@@ -1789,7 +1789,8 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         if (!stopUpdate) {
             // Own ad strip: only on the main "All" list, right below the (hidden) archive row.
             final boolean showAdStrip = shouldShowAdStrip(filter) && !array.isEmpty();
-            final int adStripIndex = showAdStrip && array.get(0).isFolder ? 1 : 0;
+            final boolean firstIsArchive = showAdStrip && (array.get(0).isFolder || array.get(0) instanceof TLRPC.TL_dialogFolder || DialogObject.isFolderDialogId(array.get(0).id));
+            final int adStripIndex = firstIsArchive ? 1 : 0;
             for (int k = 0; k < array.size(); k++) {
                 if (showAdStrip && k == adStripIndex) {
                     itemInternals.add(new ItemInternal(VIEW_TYPE_AD_STRIP));
