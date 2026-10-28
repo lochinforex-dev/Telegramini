@@ -13723,6 +13723,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             io.setTranslationY(-dp(64));
             return;
         }
+        final String fmLang = LocaleController.getInstance().getCurrentLocale().getLanguage();
+        final String fmAutoDeleteTitle = "uz".equals(fmLang) ? "Xabarlarni avto-o'chirish" : ("ru".equals(fmLang) ? "Автоудаление сообщений" : "Auto-delete messages");
+        io.add(R.drawable.msg_clear, fmAutoDeleteTitle, () -> presentFragment(new AutoDeleteMessagesActivity()));
 
         final boolean isCurrentThemeDark;
         if (resourceProvider != null) {
