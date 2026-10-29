@@ -1178,6 +1178,10 @@ public class NotificationsController extends BaseController implements Notificat
                 int mid = messageObject.getId();
                 long randomId = messageObject.isFcmMessage() ? messageObject.messageOwner.random_id : 0;
                 long dialogId = messageObject.getDialogId();
+                if (PrivateChatController.getInstance().isLocked(dialogId)) {
+                    // "Maxfiy chat": no notification at all.
+                    continue;
+                }
                 boolean isChannel;
                 if (messageObject.isFcmMessage()) {
                     isChannel = messageObject.localChannel;
@@ -1604,6 +1608,9 @@ public class NotificationsController extends BaseController implements Notificat
                         personalCount++;
                     }
                     long dialog_id = messageObject.getDialogId();
+                    if (PrivateChatController.getInstance().isLocked(dialog_id)) {
+                        continue;
+                    }
                     long original_dialog_id = dialog_id;
                     long topicId = MessageObject.getTopicId(currentAccount, messageObject.messageOwner, getMessagesController().isForum(messageObject));
                     if (messageObject.messageOwner.mentioned) {
@@ -1639,6 +1646,9 @@ public class NotificationsController extends BaseController implements Notificat
             }
             for (int a = 0; a < dialogs.size(); a++) {
                 long dialog_id = dialogs.keyAt(a);
+                if (PrivateChatController.getInstance().isLocked(dialog_id)) {
+                    continue;
+                }
                 int index = settingsCache.indexOfKey(dialog_id);
                 boolean value;
                 if (index >= 0) {
@@ -1678,6 +1688,9 @@ public class NotificationsController extends BaseController implements Notificat
                         personalCount++;
                     }
                     long dialogId = messageObject.getDialogId();
+                    if (PrivateChatController.getInstance().isLocked(dialogId)) {
+                        continue;
+                    }
                     long originalDialogId = dialogId;
                     long topicId = MessageObject.getTopicId(currentAccount, messageObject.messageOwner, getMessagesController().isForum(messageObject));
                     long randomId = messageObject.messageOwner.random_id;
