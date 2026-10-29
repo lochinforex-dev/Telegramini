@@ -180,7 +180,7 @@ public class DataSettingsActivity extends BaseFragment {
 //        autoplaySectionRow = rowCount++;
         streamSectionRow = rowCount++;
         enableStreamRow = rowCount++;
-        if (BuildVars.DEBUG_VERSION) {
+        if (false) {
             enableMkvRow = rowCount++;
             enableAllStreamRow = rowCount++;
         } else {
