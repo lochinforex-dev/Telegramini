@@ -1943,6 +1943,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     @Override
     public boolean presentFragment(NavigationParams params) {
         BaseFragment fragment = params.fragment;
+        if (fragment instanceof ChatActivity && org.telegram.messenger.PrivateChatController.getInstance().needsUnlock(fragment.getArguments())) {
+            // "Maxfiy chat": ask for the password before the chat is opened.
+            if (!params.preview) {
+                final long lockedDialogId = org.telegram.messenger.PrivateChatController.dialogIdFromArgs(fragment.getArguments());
+                final NavigationParams retryParams = params;
+                org.telegram.ui.PrivateChatUi.requestUnlock(LaunchActivity.instance != null ? LaunchActivity.instance : getContext(), lockedDialogId, () -> presentFragment(retryParams));
+            }
+            return false;
+        }
         boolean removeLast = params.removeLast;
         boolean forceWithoutAnimation = params.noAnimation;
         boolean check = params.checkPresentFromDelegate;
