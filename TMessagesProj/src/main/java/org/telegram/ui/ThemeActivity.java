@@ -671,9 +671,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             chatListRow = rowCount++;
             chatListInfoRow = rowCount++;
 
-            appIconHeaderRow = rowCount++;
-            appIconSelectorRow = rowCount++;
-            appIconShadowRow = rowCount++;
+            appIconHeaderRow = -1;
+            appIconSelectorRow = -1;
+            appIconShadowRow = -1;
 
             swipeGestureHeaderRow = rowCount++;
             swipeGestureRow = rowCount++;
