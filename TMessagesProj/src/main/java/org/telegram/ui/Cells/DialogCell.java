@@ -80,6 +80,7 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.PrivateChatController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
@@ -2382,6 +2383,15 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 nameLeft += namePaddingEnd;
             }
         }
+        if (PrivateChatController.getInstance().isLocked(currentDialogId)) {
+            // "Maxfiy chat": hide the name, the last message and the typing text in the chat list.
+            nameString = "\uD83D\uDD12 Maxfiy chat";
+            messageString = "";
+            messageNameString = null;
+            typingString = "";
+            buttonString = null;
+            thumbsCount = 0;
+        }
         try {
             int ellipsizeWidth = nameWidth - dp(12);
             if (ellipsizeWidth < 0) {
@@ -3609,6 +3619,12 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         avatarImage.setForUserOrChat(chat, avatarDrawable);
                     }
                 }
+            }
+
+            if (currentDialogFolderId == 0 && PrivateChatController.getInstance().isLocked(currentDialogId)) {
+                // "Maxfiy chat": replace the avatar with a neutral placeholder.
+                avatarDrawable.setInfo(currentDialogId, "?", null);
+                avatarImage.setImage(null, "50_50", avatarDrawable, null, 0);
             }
 
             if (animated && (oldUnreadCount != unreadCount || oldMarkUnread != markUnread) && (!isDialogCell || (System.currentTimeMillis() - lastDialogChangedTime) > 100)) {
