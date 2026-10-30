@@ -29,7 +29,9 @@ public class PrivateChatController {
     private static final String KEY_SALT = "salt";
     private static final String KEY_HASH = "hash";
 
-    private static final int ITERATIONS = 60000;
+    private static final int ITERATIONS = 10000;
+    private static final int LEGACY_ITERATIONS = 60000;
+    private static final String KEY_ITER = "iter";
     private static final long UNLOCK_WINDOW_MS = 2 * 60 * 1000L;
     private static final int MAX_FAILS = 5;
     private static final long BLOCK_MS = 30 * 1000L;
@@ -112,15 +114,19 @@ public class PrivateChatController {
         return prefs.getString(KEY_HASH, null) != null;
     }
 
-    public synchronized boolean setPassword(String password) {
+    /** Heavy: call it from a background thread. */
+    public boolean setPassword(String password) {
         try {
             byte[] salt = new byte[16];
             new SecureRandom().nextBytes(salt);
-            byte[] hash = hash(password, salt);
-            prefs.edit()
-                    .putString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
-                    .putString(KEY_HASH, Base64.encodeToString(hash, Base64.NO_WRAP))
-                    .commit();
+            byte[] hash = hash(password, salt, ITERATIONS);
+            synchronized (this) {
+                prefs.edit()
+                        .putString(KEY_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
+                        .putString(KEY_HASH, Base64.encodeToString(hash, Base64.NO_WRAP))
+                        .putInt(KEY_ITER, ITERATIONS)
+                        .commit();
+            }
             return true;
         } catch (Exception e) {
             FileLog.e(e);
@@ -134,34 +140,48 @@ public class PrivateChatController {
         return left > 0 ? (int) ((left + 999) / 1000) : 0;
     }
 
-    public synchronized boolean checkPassword(String password) {
+    /** Heavy: call it from a background thread. */
+    public boolean checkPassword(String password) {
         if (getBlockedSeconds() > 0) {
             return false;
         }
+        String saltString;
+        String hashString;
+        int iterations;
+        synchronized (this) {
+            saltString = prefs.getString(KEY_SALT, null);
+            hashString = prefs.getString(KEY_HASH, null);
+            iterations = prefs.getInt(KEY_ITER, LEGACY_ITERATIONS);
+        }
+        if (saltString == null || hashString == null) {
+            return false;
+        }
+        boolean ok;
         try {
-            String saltString = prefs.getString(KEY_SALT, null);
-            String hashString = prefs.getString(KEY_HASH, null);
-            if (saltString == null || hashString == null) {
-                return false;
-            }
             byte[] expected = Base64.decode(hashString, Base64.NO_WRAP);
-            byte[] actual = hash(password, Base64.decode(saltString, Base64.NO_WRAP));
-            boolean ok = MessageDigest.isEqual(expected, actual);
+            byte[] actual = hash(password, Base64.decode(saltString, Base64.NO_WRAP), iterations);
+            ok = MessageDigest.isEqual(expected, actual);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
+        }
+        synchronized (this) {
             if (ok) {
                 failCount = 0;
             } else if (++failCount >= MAX_FAILS) {
                 failCount = 0;
                 blockedUntil = SystemClock.elapsedRealtime() + BLOCK_MS;
             }
-            return ok;
-        } catch (Exception e) {
-            FileLog.e(e);
-            return false;
         }
+        if (ok && iterations > ITERATIONS) {
+            // An older, slower password hash: store it again in the faster form.
+            setPassword(password);
+        }
+        return ok;
     }
 
-    private static byte[] hash(String password, byte[] salt) throws Exception {
-        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATIONS, 256);
+    private static byte[] hash(String password, byte[] salt, int iterations) throws Exception {
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, 256);
         return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded();
     }
 
