@@ -19,6 +19,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.PrivateChatController;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -153,16 +154,21 @@ public class PrivateChatUi {
         builder.setMessage(error != null ? error : message);
         builder.setView(createContainer(context, field));
         builder.setPositiveButton("Ochish", (d, w) -> {
-            int blocked = controller.getBlockedSeconds();
-            if (blocked > 0) {
-                AndroidUtilities.runOnUIThread(() -> askPassword(context, message, onSuccess, "Juda ko'p urinish. " + blocked + " soniyadan keyin urinib ko'ring"), 150);
-                return;
-            }
-            if (controller.checkPassword(field.getText().toString())) {
-                onSuccess.run();
-            } else {
-                AndroidUtilities.runOnUIThread(() -> askPassword(context, message, onSuccess, "Parol noto'g'ri. Qayta kiriting"), 150);
-            }
+            final String typed = field.getText().toString();
+            // The password check is heavy, so it runs in the background and the screen stays smooth.
+            Utilities.globalQueue.postRunnable(() -> {
+                final int blocked = controller.getBlockedSeconds();
+                final boolean ok = blocked == 0 && controller.checkPassword(typed);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (blocked > 0) {
+                        askPassword(context, message, onSuccess, "Juda ko'p urinish. " + blocked + " soniyadan keyin urinib ko'ring");
+                    } else if (ok) {
+                        onSuccess.run();
+                    } else {
+                        askPassword(context, message, onSuccess, "Parol noto'g'ri. Qayta kiriting");
+                    }
+                });
+            });
         });
         builder.setNegativeButton("Bekor qilish", null);
         showWithKeyboard(builder.create(), field);
@@ -186,10 +192,17 @@ public class PrivateChatUi {
                 AndroidUtilities.runOnUIThread(() -> createPassword(context, onDone, "Parol kamida " + MIN_PASSWORD_LENGTH + " belgidan iborat bo'lsin"), 150);
             } else if (!p1.equals(p2)) {
                 AndroidUtilities.runOnUIThread(() -> createPassword(context, onDone, "Parollar bir xil emas. Qayta kiriting"), 150);
-            } else if (PrivateChatController.getInstance().setPassword(p1)) {
-                onDone.run();
             } else {
-                toast(context, "Parolni saqlab bo'lmadi");
+                Utilities.globalQueue.postRunnable(() -> {
+                    final boolean saved = PrivateChatController.getInstance().setPassword(p1);
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (saved) {
+                            onDone.run();
+                        } else {
+                            toast(context, "Parolni saqlab bo'lmadi");
+                        }
+                    });
+                });
             }
         });
         builder.setNegativeButton("Bekor qilish", null);
