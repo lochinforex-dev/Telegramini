@@ -751,7 +751,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
         items.add(SettingCell.Factory.of(40, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_secret, "Maxfiy chatlar", "Chatni parol bilan qulflash"));
-        items.add(SettingCell.Factory.of(41, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.msg_reply, TezJavoblarActivity.getTitle(), "Tayyor qisqa javoblar"));
+        items.add(SettingCell.Factory.of(41, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.msg_message, TezJavoblarActivity.getTitle(), "Tayyor qisqa javoblar"));
 
         items.add(UItem.asShadow(null));
         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
