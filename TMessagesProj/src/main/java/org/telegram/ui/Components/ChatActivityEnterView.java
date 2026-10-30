@@ -2792,6 +2792,30 @@ public class ChatActivityEnterView extends FrameLayout implements
             attachLayout.setEnabled(false);
             attachLayout.setClipChildren(false);
             messageEditTextContainer.addView(attachLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
+                        // FastMessenger: Tez javoblar tugmasi
+            android.widget.TextView fmQuickButton = new android.widget.TextView(context);
+            fmQuickButton.setText("\u26A1");
+            fmQuickButton.setTextSize(20);
+            fmQuickButton.setGravity(Gravity.CENTER);
+            fmQuickButton.setContentDescription(org.telegram.ui.TezJavoblarActivity.getTitle());
+            fmQuickButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)));
+            fmQuickButton.setOnClickListener(fmView -> {
+                final java.util.ArrayList<String> fmList = org.telegram.ui.TezJavoblarActivity.getAll();
+                if (fmList.isEmpty()) {
+                    return;
+                }
+                new AlertDialog.Builder(getContext(), resourcesProvider)
+                    .setTitle(org.telegram.ui.TezJavoblarActivity.getTitle())
+                    .setItems(fmList.toArray(new CharSequence[0]), (fmDialog, fmWhich) -> {
+                        if (messageEditText != null && fmWhich >= 0 && fmWhich < fmList.size()) {
+                            int fmPos = Math.max(0, messageEditText.getSelectionEnd());
+                            messageEditText.getText().insert(fmPos, fmList.get(fmWhich));
+                            messageEditText.requestFocus();
+                        }
+                    })
+                    .show();
+            });
+            attachLayout.addView(fmQuickButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
 
             if (chatMode != ChatActivity.MODE_WELCOME_MESSAGES) {
                 notifyButton = new ImageView(context);
