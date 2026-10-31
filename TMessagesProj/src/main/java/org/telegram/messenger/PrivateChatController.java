@@ -32,7 +32,7 @@ public class PrivateChatController {
     private static final int ITERATIONS = 10000;
     private static final int LEGACY_ITERATIONS = 60000;
     private static final String KEY_ITER = "iter";
-    private static final long UNLOCK_WINDOW_MS = 2 * 60 * 1000L;
+    private static final long UNLOCK_WINDOW_MS = 15 * 1000L;
     private static final int MAX_FAILS = 5;
     private static final long BLOCK_MS = 30 * 1000L;
 
@@ -76,6 +76,10 @@ public class PrivateChatController {
     public boolean isLocked(long dialogId) {
         Set<Long> set = locked;
         return !set.isEmpty() && set.contains(dialogId);
+    }
+
+    public Set<Long> getLockedIds() {
+        return locked;
     }
 
     public boolean hasAnyLocked() {
