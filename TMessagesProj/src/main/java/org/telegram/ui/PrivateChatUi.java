@@ -11,6 +11,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import org.telegram.ui.ActionBar.INavigationLayout;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.DialogObject;
@@ -25,15 +27,35 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /** Screens and dialogs of the "Maxfiy chatlar" feature. */
 public class PrivateChatUi {
 
     private static final int MIN_PASSWORD_LENGTH = 4;
 
-    // ---------- picker: choose a chat to lock or unlock ----------
+    // ---------- entry: the management screen (password first) ----------
 
+    /** Settings row and the three-dot menu both come here. */
     public static void openPicker(BaseFragment parent) {
+        openFromTopBar(parent);
+    }
+
+    public static void openFromTopBar(BaseFragment parent) {
+        if (parent == null || parent.getParentActivity() == null) {
+            return;
+        }
+        final Activity activity = parent.getParentActivity();
+        if (PrivateChatController.getInstance().hasPassword()) {
+            askPassword(activity, "Maxfiy chatlarni boshqarish uchun parolni kiriting", () -> parent.presentFragment(new PrivateChatsActivity()), null);
+        } else {
+            parent.presentFragment(new PrivateChatsActivity());
+        }
+    }
+
+    // ---------- picker: choose a chat to add ----------
+
+    public static void pickChat(BaseFragment parent, Runnable onChanged) {
         if (parent == null || parent.getParentActivity() == null) {
             return;
         }
@@ -50,57 +72,169 @@ public class PrivateChatUi {
                 }
                 final long dialogId = dids.get(0).dialogId;
                 f.finishFragment();
-                AndroidUtilities.runOnUIThread(() -> handleSelected(activity, dialogId), 250);
+                AndroidUtilities.runOnUIThread(() -> handleSelected(activity, dialogId, onChanged), 250);
                 return true;
             }
         });
         parent.presentFragment(fragment);
     }
 
-    /** The red lock button in the chat list's top bar. */
-    public static void openFromTopBar(BaseFragment parent) {
-        if (parent == null || parent.getParentActivity() == null) {
-            return;
-        }
-        final Activity activity = parent.getParentActivity();
-        if (PrivateChatController.getInstance().hasPassword()) {
-            askPassword(activity, "Maxfiy chatlarni boshqarish uchun parolni kiriting", () -> openPicker(parent), null);
-        } else {
-            openPicker(parent);
-        }
-    }
-
-    private static void handleSelected(Context context, long dialogId) {
+    private static void handleSelected(Context context, long dialogId, Runnable onChanged) {
         if (DialogObject.isEncryptedDialog(dialogId)) {
             toast(context, "Telegram'ning maxfiy (shifrlangan) chatlari bu bo'limda qo'llab-quvvatlanmaydi");
             return;
         }
         final PrivateChatController controller = PrivateChatController.getInstance();
         if (controller.isLocked(dialogId)) {
-            askPassword(context, "Maxfiy chatni ro'yxatdan chiqarish uchun parolni kiriting", () -> {
-                controller.unlock(dialogId);
-                refreshLists();
-                toast(context, "Chat maxfiy ro'yxatdan chiqarildi");
-            }, null);
+            toast(context, "Bu chat allaqachon maxfiy ro'yxatda");
         } else if (!controller.hasPassword()) {
-            createPassword(context, () -> lockNow(context, dialogId));
+            createPassword(context, () -> lockNow(context, dialogId, onChanged));
         } else {
-            lockNow(context, dialogId);
+            lockNow(context, dialogId, onChanged);
         }
     }
 
-    private static void lockNow(Context context, long dialogId) {
+    private static void lockNow(Context context, long dialogId, Runnable onChanged) {
         PrivateChatController.getInstance().lock(dialogId);
         try {
             NotificationsController.getInstance(UserConfig.selectedAccount).removeNotificationsForDialog(dialogId);
         } catch (Throwable ignore) {
         }
         refreshLists();
+        if (onChanged != null) {
+            onChanged.run();
+        }
         toast(context, "Chat maxfiy qilindi");
     }
 
-    private static void refreshLists() {
+    static void refreshLists() {
         NotificationCenter.getInstance(UserConfig.selectedAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+    }
+
+    // ---------- remove a chat from the private list ----------
+
+    public interface NameProvider {
+        String nameOf(long dialogId);
+    }
+
+    public static void chooseChatToRemove(BaseFragment parent, Context context, ArrayList<Long> ids, NameProvider names, Runnable onChanged) {
+        if (context == null || ids.isEmpty()) {
+            return;
+        }
+        final ArrayList<Long> list = new ArrayList<>(ids);
+        CharSequence[] labels = new CharSequence[list.size()];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = names.nameOf(list.get(i));
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Qaysi chat maxfiy ro'yxatdan chiqarilsin?");
+        builder.setItems(labels, (d, which) -> {
+            final long dialogId = list.get(which);
+            AlertDialog.Builder confirm = new AlertDialog.Builder(context);
+            confirm.setTitle("Maxfiy chatdan chiqarish");
+            confirm.setMessage("\"" + names.nameOf(dialogId) + "\" maxfiy ro'yxatdan chiqarilsinmi? U oddiy chatlar ro'yxatida ko'rinadi va bildirishnomalar qaytadi.");
+            confirm.setPositiveButton("Chiqarish", (d2, w2) -> {
+                PrivateChatController.getInstance().unlock(dialogId);
+                refreshLists();
+                if (onChanged != null) {
+                    onChanged.run();
+                }
+                toast(context, "Chat maxfiy ro'yxatdan chiqarildi");
+            });
+            confirm.setNegativeButton("Bekor qilish", null);
+            AndroidUtilities.runOnUIThread(() -> confirm.create().show(), 150);
+        });
+        builder.setNegativeButton("Bekor qilish", null);
+        builder.create().show();
+    }
+
+    // ---------- change the password ----------
+
+    public static void changePassword(Context context) {
+        changePassword(context, null);
+    }
+
+    private static void changePassword(Context context, String error) {
+        if (context == null) {
+            return;
+        }
+        final EditText oldField = createField(context, "Hozirgi parol");
+        final EditText newField = createField(context, "Yangi parol (kamida " + MIN_PASSWORD_LENGTH + " belgi)");
+        final EditText repeatField = createField(context, "Yangi parolni takrorlang");
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Parolni o'zgartirish");
+        builder.setMessage(error != null ? error : "Hozirgi parolni va yangisini kiriting.");
+        builder.setView(createContainer(context, oldField, newField, repeatField));
+        builder.setPositiveButton("Saqlash", (d, w) -> {
+            final String oldPassword = oldField.getText().toString();
+            final String newPassword = newField.getText().toString();
+            final String repeat = repeatField.getText().toString();
+            if (newPassword.length() < MIN_PASSWORD_LENGTH) {
+                AndroidUtilities.runOnUIThread(() -> changePassword(context, "Yangi parol kamida " + MIN_PASSWORD_LENGTH + " belgidan iborat bo'lsin"), 150);
+                return;
+            }
+            if (!newPassword.equals(repeat)) {
+                AndroidUtilities.runOnUIThread(() -> changePassword(context, "Yangi parollar bir xil emas"), 150);
+                return;
+            }
+            Utilities.globalQueue.postRunnable(() -> {
+                final PrivateChatController controller = PrivateChatController.getInstance();
+                final int blocked = controller.getBlockedSeconds();
+                final boolean oldOk = blocked == 0 && controller.checkPassword(oldPassword);
+                final boolean saved = oldOk && controller.setPassword(newPassword);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (blocked > 0) {
+                        changePassword(context, "Juda ko'p urinish. " + blocked + " soniyadan keyin urinib ko'ring");
+                    } else if (!oldOk) {
+                        changePassword(context, "Hozirgi parol noto'g'ri");
+                    } else if (saved) {
+                        toast(context, "Parol o'zgartirildi");
+                    } else {
+                        toast(context, "Parolni saqlab bo'lmadi");
+                    }
+                });
+            });
+        });
+        builder.setNegativeButton("Bekor qilish", null);
+        showWithKeyboard(builder.create(), oldField);
+    }
+
+    // ---------- the section locks again when the app is left ----------
+
+    private static boolean pausedWhileProtected;
+
+    private static boolean isProtectedFragment(BaseFragment fragment) {
+        if (fragment instanceof PrivateChatsActivity) {
+            return true;
+        }
+        if (fragment instanceof ChatActivity) {
+            long dialogId = PrivateChatController.dialogIdFromArgs(fragment.getArguments());
+            return dialogId != 0 && PrivateChatController.getInstance().isLocked(dialogId);
+        }
+        return false;
+    }
+
+    public static void onLayoutPause(BaseFragment topFragment) {
+        if (isProtectedFragment(topFragment)) {
+            pausedWhileProtected = true;
+        }
+    }
+
+    public static void onLayoutResume(INavigationLayout layout) {
+        if (!pausedWhileProtected) {
+            return;
+        }
+        pausedWhileProtected = false;
+        closeProtected(layout, 6);
+    }
+
+    private static void closeProtected(INavigationLayout layout, int guard) {
+        List<BaseFragment> stack = layout.getFragmentStack();
+        if (guard <= 0 || stack.size() <= 1 || !isProtectedFragment(stack.get(stack.size() - 1))) {
+            return;
+        }
+        layout.closeLastFragment(false, true);
+        AndroidUtilities.runOnUIThread(() -> closeProtected(layout, guard - 1), 120);
     }
 
     // ---------- opening a locked chat ----------
