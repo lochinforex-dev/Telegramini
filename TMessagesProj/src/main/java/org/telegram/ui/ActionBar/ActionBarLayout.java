@@ -1012,6 +1012,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (sheetFragment != null) {
             sheetFragment.onResume();
         }
+        org.telegram.ui.PrivateChatUi.onLayoutResume(this);
     }
 
     @Override
@@ -1030,6 +1031,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (!fragmentsStack.isEmpty()) {
             BaseFragment lastFragment = fragmentsStack.get(fragmentsStack.size() - 1);
             lastFragment.onPause();
+            org.telegram.ui.PrivateChatUi.onLayoutPause(lastFragment);
         }
         if (sheetFragment != null) {
             sheetFragment.onPause();
