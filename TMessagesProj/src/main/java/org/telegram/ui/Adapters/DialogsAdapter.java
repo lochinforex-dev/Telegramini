@@ -1219,10 +1219,24 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         return itemInternals.get(i).viewType;
     }
 
+    /** Private chats are hidden from the list, so list positions and array positions differ. */
+    private static int visibleToArrayIndex(ArrayList<TLRPC.Dialog> dialogs, int visibleIndex) {
+        int visible = -1;
+        for (int i = 0; i < dialogs.size(); i++) {
+            if (!org.telegram.messenger.PrivateChatController.getInstance().isLocked(dialogs.get(i).id)) {
+                visible++;
+                if (visible == visibleIndex) {
+                    return i;
+                }
+            }
+        }
+        return visibleIndex;
+    }
+
     public void moveDialogs(RecyclerListView recyclerView, int fromPosition, int toPosition) {
         ArrayList<TLRPC.Dialog> dialogs = parentFragment.getDialogsArray(currentAccount, dialogsType, folderId, false);
-        int fromIndex = fixPosition(fromPosition);
-        int toIndex = fixPosition(toPosition);
+        int fromIndex = visibleToArrayIndex(dialogs, fixPosition(fromPosition));
+        int toIndex = visibleToArrayIndex(dialogs, fixPosition(toPosition));
         TLRPC.Dialog fromDialog = dialogs.get(fromIndex);
         TLRPC.Dialog toDialog = dialogs.get(toIndex);
         if (dialogsType == 7 || dialogsType == 8) {
@@ -1721,6 +1735,9 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
 
         if (collapsedView || isTransitionSupport) {
             for (int k = 0; k < array.size(); k++) {
+                if (org.telegram.messenger.PrivateChatController.getInstance().isLocked(array.get(k).id)) {
+                    continue;
+                }
                 if (dialogsType == 2 && array.get(k) instanceof DialogsActivity.DialogsHeader) {
                     itemInternals.add(new ItemInternal(VIEW_TYPE_HEADER_2, array.get(k)));
                 } else {
@@ -1754,6 +1771,9 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 itemInternals.add(new ItemInternal(VIEW_TYPE_HEADER));
             } else {
                 for (int k = 0; k < array.size(); k++) {
+                    if (org.telegram.messenger.PrivateChatController.getInstance().isLocked(array.get(k).id)) {
+                        continue;
+                    }
                     itemInternals.add(new ItemInternal(VIEW_TYPE_DIALOG, array.get(k)));
                 }
                 itemInternals.add(new ItemInternal(VIEW_TYPE_SHADOW));
@@ -1795,6 +1815,10 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 if (showAdStrip && k == adStripIndex) {
                     itemInternals.add(new ItemInternal(VIEW_TYPE_AD_STRIP));
                     adBannerPosition = itemInternals.size() - 1;
+                }
+                if (org.telegram.messenger.PrivateChatController.getInstance().isLocked(array.get(k).id)) {
+                    // "Maxfiy chat": not shown in the normal lists at all.
+                    continue;
                 }
                 if (dialogsType == DialogsActivity.DIALOGS_TYPE_ADD_USERS_TO && array.get(k) instanceof DialogsActivity.DialogsHeader) {
                     itemInternals.add(new ItemInternal(VIEW_TYPE_HEADER_2, array.get(k)));
