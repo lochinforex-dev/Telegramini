@@ -52,10 +52,9 @@ public class CalendarTabActivity extends BaseFragment {
     private MonthView monthView;
     private LinearLayout infoPanel;
 
-    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar
+    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar, 2 = Tasbeh
     private int currentPage = 0;
-    private View calendarPage;
-    private View tasksPage;
+    private View[] pages;
     private TextView[] pageTabs;
     private int pageTabBg;
 
@@ -214,7 +213,8 @@ public class CalendarTabActivity extends BaseFragment {
         segment.setBackground(Theme.createRoundRectDrawable(dp(13), ColorUtils.blendARGB(bg, textColor, 0.09f)));
         final String[] names = {
                 t("Kalendar", "Календарь", "Calendar"),
-                t("Vazifalar", "Задачи", "Tasks")
+                t("Vazifalar", "Задачи", "Tasks"),
+                t("Tasbeh", "Тасбих", "Tasbih")
         };
         pageTabs = new TextView[names.length];
         for (int i = 0; i < names.length; i++) {
@@ -236,12 +236,15 @@ public class CalendarTabActivity extends BaseFragment {
         FrameLayout content = new FrameLayout(context);
         host.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        calendarPage = buildCalendarPage(context, bg, cardColor);
-        tasksPage = new TaqvimVazifalar(this, context, textColor, accent, cardColor);
-        content.addView(calendarPage, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        content.addView(tasksPage, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        pages = new View[]{
+                buildCalendarPage(context, bg, cardColor),
+                new TaqvimVazifalar(this, context, textColor, accent, cardColor),
+                new TaqvimTasbeh(this, context, textColor, accent, cardColor)
+        };
+        for (View page : pages) {
+            content.addView(page, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
 
         selectPage(currentPage);
 
@@ -251,11 +254,10 @@ public class CalendarTabActivity extends BaseFragment {
 
     private void selectPage(int index) {
         currentPage = index;
-        if (calendarPage != null) {
-            calendarPage.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
-        }
-        if (tasksPage != null) {
-            tasksPage.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
+        if (pages != null) {
+            for (int i = 0; i < pages.length; i++) {
+                pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
+            }
         }
         if (pageTabs == null) {
             return;

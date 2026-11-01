@@ -76,27 +76,11 @@ public class TaqvimVazifalar extends FrameLayout {
 
         list = new LinearLayout(context);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(16), dp(4), dp(16), dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 96));
+        list.setPadding(dp(16), dp(8), dp(16), dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 48));
         scroll.addView(list, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         addView(scroll, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        TextView fab = new TextView(context);
-        fab.setText("+");
-        fab.setTextSize(30);
-        fab.setTextColor(Color.WHITE);
-        fab.setGravity(Gravity.CENTER);
-        GradientDrawable fabBg = new GradientDrawable();
-        fabBg.setShape(GradientDrawable.OVAL);
-        fabBg.setColor(accent);
-        fab.setBackground(fabBg);
-        fab.setElevation(dp(6));
-        fab.setOnClickListener(v -> showDialog(null));
-        FrameLayout.LayoutParams fabLp = new FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM | Gravity.RIGHT);
-        fabLp.rightMargin = dp(20);
-        fabLp.bottomMargin = dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 16);
-        addView(fab, fabLp);
 
         load();
         render();
@@ -201,15 +185,24 @@ public class TaqvimVazifalar extends FrameLayout {
         Collections.sort(overdue, (x, y) -> Integer.compare(x.due, y.due));
         Collections.sort(later, (x, y) -> Integer.compare(x.due, y.due));
 
+        if (!tasks.isEmpty()) {
+            list.addView(buildSummary(finished.size(), tasks.size()), new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        barLp.topMargin = dp(12);
+        list.addView(buildAddBar(), barLp);
+
         if (tasks.isEmpty()) {
             TextView empty = new TextView(getContext());
             empty.setTextSize(16);
             empty.setGravity(Gravity.CENTER);
             empty.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
-            empty.setText(t("Hali vazifa yo'q.\nPastdagi + tugmasi bilan qo'shing.",
-                    "Пока нет задач.\nДобавьте кнопкой + внизу.",
-                    "No tasks yet.\nAdd one with the + button."));
-            empty.setPadding(dp(20), dp(90), dp(20), 0);
+            empty.setText(t("Hali vazifa yo'q.\nYuqoridagi qatorni bosib, birinchisini qo'shing.",
+                    "Пока нет задач.\nНажмите строку выше, чтобы добавить первую.",
+                    "No tasks yet.\nTap the bar above to add the first one."));
+            empty.setPadding(dp(20), dp(70), dp(20), 0);
             list.addView(empty, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             return;
@@ -220,6 +213,82 @@ public class TaqvimVazifalar extends FrameLayout {
         addSection(t("Keyinroq", "Позже", "Later"), later, today);
         addSection(t("Sanasiz", "Без даты", "No date"), noDate, today);
         addSection(t("Bajarilgan", "Выполнено", "Done"), finished, today);
+    }
+
+    /** Colored card with "2 / 5 done" and a progress bar. */
+    private View buildSummary(int done, int total) {
+        final Context ctx = getContext();
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18), dp(16), dp(18), dp(16));
+        card.setBackground(Theme.createRoundRectDrawable(dp(22), ColorUtils.setAlphaComponent(accent, 34)));
+
+        LinearLayout top = new LinearLayout(ctx);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView count = new TextView(ctx);
+        count.setTextSize(26);
+        count.setTypeface(AndroidUtilities.bold());
+        count.setTextColor(textColor);
+        count.setText(done + " / " + total);
+        top.addView(count, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView label = new TextView(ctx);
+        label.setTextSize(15);
+        label.setTextColor(ColorUtils.setAlphaComponent(textColor, 160));
+        label.setText(t("vazifa bajarildi", "задач выполнено", "tasks done"));
+        label.setPadding(dp(10), dp(4), 0, 0);
+        top.addView(label, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(top, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout track = new LinearLayout(ctx);
+        track.setOrientation(LinearLayout.HORIZONTAL);
+        track.setBackground(Theme.createRoundRectDrawable(dp(4), ColorUtils.setAlphaComponent(textColor, 28)));
+        View fill = new View(ctx);
+        fill.setBackground(Theme.createRoundRectDrawable(dp(4), accent));
+        track.addView(fill, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, (float) done));
+        View rest = new View(ctx);
+        track.addView(rest, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, (float) (total - done)));
+        LinearLayout.LayoutParams trackLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(8));
+        trackLp.topMargin = dp(12);
+        card.addView(track, trackLp);
+        return card;
+    }
+
+    /** A bar that looks like an input field: tap it to add a task. */
+    private View buildAddBar() {
+        final Context ctx = getContext();
+        LinearLayout bar = new LinearLayout(ctx);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(dp(12), dp(10), dp(16), dp(10));
+        bar.setBackground(Theme.createRoundRectDrawable(dp(18), cardColor));
+        bar.setOnClickListener(v -> showDialog(null));
+
+        TextView plus = new TextView(ctx);
+        plus.setText("+");
+        plus.setTextSize(22);
+        plus.setTextColor(Color.WHITE);
+        plus.setGravity(Gravity.CENTER);
+        GradientDrawable plusBg = new GradientDrawable();
+        plusBg.setShape(GradientDrawable.OVAL);
+        plusBg.setColor(accent);
+        plus.setBackground(plusBg);
+        bar.addView(plus, new LinearLayout.LayoutParams(dp(34), dp(34)));
+
+        TextView label = new TextView(ctx);
+        label.setTextSize(16);
+        label.setTextColor(ColorUtils.setAlphaComponent(textColor, 150));
+        label.setText(t("Yangi vazifa qo'shish", "Добавить задачу", "Add a new task"));
+        label.setPadding(dp(12), 0, 0, 0);
+        bar.addView(label, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return bar;
     }
 
     private void addSection(String title, ArrayList<Task> items, int today) {
@@ -233,20 +302,20 @@ public class TaqvimVazifalar extends FrameLayout {
         header.setTextSize(12);
         header.setTypeface(AndroidUtilities.bold());
         header.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
-        header.setPadding(dp(6), dp(14), 0, dp(6));
+        header.setPadding(dp(8), dp(18), 0, dp(8));
         list.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(Theme.createRoundRectDrawable(dp(16), cardColor));
+        card.setBackground(Theme.createRoundRectDrawable(dp(20), cardColor));
         for (int i = 0; i < items.size(); i++) {
             if (i > 0) {
                 View divider = new View(ctx);
-                divider.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 25));
+                divider.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 22));
                 LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, 1);
-                dividerLp.leftMargin = dp(50);
+                dividerLp.leftMargin = dp(54);
                 card.addView(divider, dividerLp);
             }
             card.addView(buildRow(items.get(i), today), new LinearLayout.LayoutParams(
@@ -262,7 +331,7 @@ public class TaqvimVazifalar extends FrameLayout {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(4), dp(2), dp(14), dp(2));
+        row.setPadding(dp(6), dp(2), dp(14), dp(2));
         row.setOnClickListener(v -> showDialog(task));
 
         // round check mark
@@ -276,14 +345,14 @@ public class TaqvimVazifalar extends FrameLayout {
             circleBg.setStroke(dp(2), GREEN);
         } else {
             circleBg.setColor(Color.TRANSPARENT);
-            circleBg.setStroke(dp(2), ColorUtils.setAlphaComponent(textColor, 110));
+            circleBg.setStroke(dp(2), ColorUtils.setAlphaComponent(accent, 200));
         }
         circle.setBackground(circleBg);
         circle.setText(task.done ? "✓" : "");
         circle.setTextColor(Color.WHITE);
-        circle.setTextSize(14);
+        circle.setTextSize(15);
         circle.setGravity(Gravity.CENTER);
-        checkBox.addView(circle, new FrameLayout.LayoutParams(dp(24), dp(24)));
+        checkBox.addView(circle, new FrameLayout.LayoutParams(dp(26), dp(26)));
         checkBox.setOnClickListener(v -> {
             task.done = !task.done;
             save();
@@ -295,7 +364,7 @@ public class TaqvimVazifalar extends FrameLayout {
         // text + date
         LinearLayout column = new LinearLayout(ctx);
         column.setOrientation(LinearLayout.VERTICAL);
-        column.setPadding(0, dp(10), 0, dp(10));
+        column.setPadding(0, dp(11), 0, dp(11));
         TextView title = new TextView(ctx);
         title.setTextSize(16);
         title.setText(task.text);
@@ -334,8 +403,8 @@ public class TaqvimVazifalar extends FrameLayout {
                 tag.setTextSize(12);
                 tag.setText(label);
                 tag.setTextColor(color);
-                tag.setPadding(dp(8), dp(3), dp(8), dp(3));
-                tag.setBackground(Theme.createRoundRectDrawable(dp(8), ColorUtils.setAlphaComponent(color, 36)));
+                tag.setPadding(dp(9), dp(4), dp(9), dp(4));
+                tag.setBackground(Theme.createRoundRectDrawable(dp(10), ColorUtils.setAlphaComponent(color, 36)));
                 LinearLayout.LayoutParams tagLp = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 tagLp.leftMargin = dp(8);
