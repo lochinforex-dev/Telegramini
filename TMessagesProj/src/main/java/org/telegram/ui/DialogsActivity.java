@@ -13723,7 +13723,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             io.setTranslationY(-dp(64));
             return;
         }
-
+        final String fmLang = org.telegram.messenger.LocaleController.getInstance().getCurrentLocale().getLanguage();
+        final String fmAutoDeleteTitle = "uz".equals(fmLang) ? "Avto-o'chirish" : ("ru".equals(fmLang) ? "Автоудаление" : "Auto-delete");
+        io.add(R.drawable.msg_clear, fmAutoDeleteTitle, () -> presentFragment(new AutoDeleteMessagesActivity()));
         final boolean isCurrentThemeDark;
         if (resourceProvider != null) {
             isCurrentThemeDark = resourceProvider.isDark();
