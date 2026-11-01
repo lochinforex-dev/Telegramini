@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Typeface;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -50,6 +51,13 @@ public class CalendarTabActivity extends BaseFragment {
     private TextView selectedDateText;
     private MonthView monthView;
     private LinearLayout infoPanel;
+
+    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar
+    private int currentPage = 0;
+    private View calendarPage;
+    private View tasksPage;
+    private TextView[] pageTabs;
+    private int pageTabBg;
 
     private SharedPreferences prefs;
     private final Map<String, String> notes = new HashMap<>();
@@ -182,18 +190,12 @@ public class CalendarTabActivity extends BaseFragment {
         textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         accent = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int cardColor = ColorUtils.blendARGB(bg, textColor, 0.05f);
+        pageTabBg = bg;
 
-        ScrollView scroll = new ScrollView(context);
-        scroll.setBackgroundColor(bg);
-        scroll.setVerticalScrollBarEnabled(false);
-        scroll.setClipToPadding(false);
-
-        LinearLayout root = new LinearLayout(context);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), AndroidUtilities.statusBarHeight + dp(16), dp(16),
-                dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 48));
-        scroll.addView(root, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout host = new LinearLayout(context);
+        host.setOrientation(LinearLayout.VERTICAL);
+        host.setBackgroundColor(bg);
+        host.setPadding(0, AndroidUtilities.statusBarHeight, 0, 0);
 
         // Title
         TextView title = new TextView(context);
@@ -201,14 +203,93 @@ public class CalendarTabActivity extends BaseFragment {
         title.setTextSize(28);
         title.setTypeface(AndroidUtilities.bold());
         title.setTextColor(textColor);
-        root.addView(title, new LinearLayout.LayoutParams(
+        title.setPadding(dp(16), dp(16), dp(16), 0);
+        host.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // Switch between the pages
+        LinearLayout segment = new LinearLayout(context);
+        segment.setOrientation(LinearLayout.HORIZONTAL);
+        segment.setPadding(dp(3), dp(3), dp(3), dp(3));
+        segment.setBackground(Theme.createRoundRectDrawable(dp(13), ColorUtils.blendARGB(bg, textColor, 0.09f)));
+        final String[] names = {
+                t("Kalendar", "Календарь", "Calendar"),
+                t("Vazifalar", "Задачи", "Tasks")
+        };
+        pageTabs = new TextView[names.length];
+        for (int i = 0; i < names.length; i++) {
+            final int index = i;
+            TextView tab = new TextView(context);
+            tab.setText(names[i]);
+            tab.setTextSize(14);
+            tab.setGravity(Gravity.CENTER);
+            tab.setPadding(0, dp(9), 0, dp(9));
+            tab.setOnClickListener(v -> selectPage(index));
+            pageTabs[i] = tab;
+            segment.addView(tab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        LinearLayout.LayoutParams segmentLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        segmentLp.setMargins(dp(16), dp(12), dp(16), dp(4));
+        host.addView(segment, segmentLp);
+
+        FrameLayout content = new FrameLayout(context);
+        host.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        calendarPage = buildCalendarPage(context, bg, cardColor);
+        tasksPage = new TaqvimVazifalar(this, context, textColor, accent, cardColor);
+        content.addView(calendarPage, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        content.addView(tasksPage, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        selectPage(currentPage);
+
+        fragmentView = host;
+        return fragmentView;
+    }
+
+    private void selectPage(int index) {
+        currentPage = index;
+        if (calendarPage != null) {
+            calendarPage.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
+        }
+        if (tasksPage != null) {
+            tasksPage.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
+        }
+        if (pageTabs == null) {
+            return;
+        }
+        for (int i = 0; i < pageTabs.length; i++) {
+            final boolean on = i == index;
+            pageTabs[i].setTextColor(on ? accent : ColorUtils.setAlphaComponent(textColor, 170));
+            pageTabs[i].setTypeface(on ? AndroidUtilities.bold() : Typeface.DEFAULT);
+            if (on) {
+                pageTabs[i].setBackground(Theme.createRoundRectDrawable(dp(10), pageTabBg));
+            } else {
+                pageTabs[i].setBackground(null);
+            }
+        }
+    }
+
+    /** The calendar page: month grid, info about the selected day, "Today" button. */
+    private View buildCalendarPage(Context context, int bg, int cardColor) {
+        ScrollView scroll = new ScrollView(context);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setClipToPadding(false);
+
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(16), dp(8), dp(16),
+                dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 48));
+        scroll.addView(root, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // Selected date line
         selectedDateText = new TextView(context);
         selectedDateText.setTextSize(15);
         selectedDateText.setTextColor(ColorUtils.setAlphaComponent(textColor, 160));
-        selectedDateText.setPadding(0, dp(4), 0, dp(16));
+        selectedDateText.setPadding(0, dp(4), 0, dp(12));
         root.addView(selectedDateText, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -261,9 +342,7 @@ public class CalendarTabActivity extends BaseFragment {
         root.addView(todayButton, lp);
 
         onDaySelected();
-
-        fragmentView = scroll;
-        return fragmentView;
+        return scroll;
     }
 
     private void onDaySelected() {
