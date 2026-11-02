@@ -2,6 +2,7 @@ package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.Map;
 
 /**
@@ -222,6 +224,8 @@ public class TaqvimTasbeh extends FrameLayout {
         return tv;
     }
 
+    private boolean showIndex = false;
+
     private void render() {
         content.removeAllViews();
         counterView = null;
@@ -230,6 +234,7 @@ public class TaqvimTasbeh extends FrameLayout {
         final Context ctx = getContext();
 
         if (items.isEmpty()) {
+            showIndex = false;
             renderEmpty(ctx);
             return;
         }
@@ -240,39 +245,49 @@ public class TaqvimTasbeh extends FrameLayout {
         }
         final Item item = current;
 
-        // chips: the user's tasbeh names + "add" (wrap to new lines, long names stay fully visible)
-        FlowLayout chips = new FlowLayout(ctx, dp(8), dp(8));
-        chips.setPadding(dp(16), 0, dp(16), 0);
-        for (final Item it : items) {
-            final boolean on = it == item;
-            TextView chip = pill(it.name, on ? accent : cardColor, on ? Color.WHITE : textColor);
-            chip.setPadding(dp(16), dp(9), dp(16), dp(9));
-            chip.setOnClickListener(v -> {
-                selectedId = it.id;
-                save();
-                render();
-            });
-            chips.addView(chip, new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (showIndex) {
+            renderIndex(ctx, item);
+            return;
         }
-        TextView add = pill("+ " + t("Yangi", "Новый", "New"), ColorUtils.setAlphaComponent(accent, 36), accent);
-        add.setPadding(dp(16), dp(9), dp(16), dp(9));
-        add.setOnClickListener(v -> showDialog(null));
-        chips.addView(add, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        content.addView(chips, new LinearLayout.LayoutParams(
+
+        // header: position in the list + delete
+        final int position = items.indexOf(item) + 1;
+        LinearLayout header = new LinearLayout(ctx);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(22), dp(6), dp(14), 0);
+        TextView pos = new TextView(ctx);
+        pos.setText(position + " / " + items.size());
+        pos.setTextSize(15);
+        pos.setTypeface(AndroidUtilities.bold());
+        pos.setTextColor(accent);
+        header.addView(pos, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView trash = new TextView(ctx);
+        trash.setText("\uD83D\uDDD1");
+        trash.setTextSize(20);
+        trash.setGravity(Gravity.CENTER);
+        trash.setAlpha(0.6f);
+        trash.setOnClickListener(v -> confirmDeleteItem(item));
+        header.addView(trash, new LinearLayout.LayoutParams(dp(40), dp(40)));
+        content.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // name and target
         TextView name = new TextView(ctx);
         name.setText(item.name);
-        name.setTextSize(22);
+        name.setTextSize(20);
         name.setTypeface(AndroidUtilities.bold());
         name.setTextColor(textColor);
         name.setGravity(Gravity.CENTER);
-        name.setPadding(dp(24), dp(22), dp(24), 0);
-        content.addView(name, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        name.setPadding(dp(18), dp(16), dp(18), dp(16));
+        name.setBackground(Theme.createRoundRectDrawable(dp(18), cardColor));
+        name.setOnClickListener(v -> showDialog(item));
+        LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        nameLp.leftMargin = dp(16);
+        nameLp.rightMargin = dp(16);
+        nameLp.topMargin = dp(6);
+        content.addView(name, nameLp);
 
         TextView sub = new TextView(ctx);
         sub.setTextSize(14);
@@ -283,6 +298,31 @@ public class TaqvimTasbeh extends FrameLayout {
                 : t("Maqsadsiz, cheksiz sanaydi", "Без цели, считает без предела", "No target, counts without limit"));
         sub.setPadding(dp(24), dp(4), dp(24), 0);
         content.addView(sub, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // quick target chooser
+        final int[] presets = {33, 99, 100, 500, 1000, 0};
+        FlowLayout targets = new FlowLayout(ctx, dp(8), dp(8));
+        targets.setPadding(dp(24), dp(14), dp(24), 0);
+        for (final int preset : presets) {
+            final boolean on = item.target == preset;
+            String label = preset == 0 ? "\u221E" : String.valueOf(preset);
+            TextView chip = pill(label, on ? accent : cardColor, on ? Color.WHITE : textColor);
+            chip.setPadding(dp(14), dp(7), dp(14), dp(7));
+            chip.setOnClickListener(v -> {
+                item.target = preset;
+                save();
+                render();
+            });
+            targets.addView(chip, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        TextView other = pill("\u270E " + t("Boshqa", "Другое", "Other"), cardColor, textColor);
+        other.setPadding(dp(14), dp(7), dp(14), dp(7));
+        other.setOnClickListener(v -> showDialog(item));
+        targets.addView(other, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(targets, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // the big counter
@@ -309,7 +349,7 @@ public class TaqvimTasbeh extends FrameLayout {
         LinearLayout buttons = new LinearLayout(ctx);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.CENTER);
-        TextView reset = pill("↺ " + t("Nolga qaytarish", "Сбросить", "Reset"), cardColor, textColor);
+        TextView reset = pill("↺ " + t("Boshidan", "Сначала", "Restart"), cardColor, textColor);
         reset.setOnClickListener(v -> confirmReset());
         TextView edit = pill("✎ " + t("O'zgartirish", "Изменить", "Edit"), cardColor, textColor);
         edit.setOnClickListener(v -> showDialog(item));
@@ -323,6 +363,42 @@ public class TaqvimTasbeh extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         buttonsLp.topMargin = dp(20);
         content.addView(buttons, buttonsLp);
+
+        // navigation: previous | contents | next
+        LinearLayout nav = new LinearLayout(ctx);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setGravity(Gravity.CENTER_VERTICAL);
+        final int idx = items.indexOf(item);
+        TextView prev = pill("\u25C0", cardColor, textColor);
+        prev.setOnClickListener(v -> {
+            selectedId = items.get((idx - 1 + items.size()) % items.size()).id;
+            save();
+            render();
+        });
+        TextView next = pill("\u25B6", cardColor, textColor);
+        next.setOnClickListener(v -> {
+            selectedId = items.get((idx + 1) % items.size()).id;
+            save();
+            render();
+        });
+        TextView toc = pill("\u2630 " + t("Mundarija", "Оглавление", "Contents"), ColorUtils.setAlphaComponent(accent, 36), accent);
+        toc.setTypeface(AndroidUtilities.bold());
+        toc.setOnClickListener(v -> {
+            showIndex = true;
+            render();
+        });
+        nav.addView(prev, new LinearLayout.LayoutParams(dp(52), dp(44)));
+        LinearLayout.LayoutParams tocLp = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        tocLp.leftMargin = dp(10);
+        tocLp.rightMargin = dp(10);
+        nav.addView(toc, tocLp);
+        nav.addView(next, new LinearLayout.LayoutParams(dp(52), dp(44)));
+        LinearLayout.LayoutParams navLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        navLp.topMargin = dp(14);
+        navLp.leftMargin = dp(16);
+        navLp.rightMargin = dp(16);
+        content.addView(nav, navLp);
 
         // stats
         LinearLayout stats = new LinearLayout(ctx);
@@ -342,6 +418,114 @@ public class TaqvimTasbeh extends FrameLayout {
         statsLp.rightMargin = dp(16);
         content.addView(stats, statsLp);
         updateStats();
+    }
+
+    /** The "Mundarija" page: all tasbehs in a list. */
+    private void renderIndex(Context ctx, final Item current) {
+        LinearLayout top = new LinearLayout(ctx);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.setPadding(dp(22), dp(10), dp(22), dp(6));
+        TextView title = new TextView(ctx);
+        title.setText(t("Mundarija", "Оглавление", "Contents"));
+        title.setTextSize(22);
+        title.setTypeface(AndroidUtilities.bold());
+        title.setTextColor(textColor);
+        top.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView total = new TextView(ctx);
+        total.setText(items.size() + " " + t("ta", "шт.", "pcs"));
+        total.setTextSize(14);
+        total.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
+        top.addView(total, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(top, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16), dp(6), dp(16), dp(6));
+        card.setBackground(Theme.createRoundRectDrawable(dp(22), cardColor));
+        for (final Item it : items) {
+            LinearLayout row = new LinearLayout(ctx);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(0, dp(13), 0, dp(13));
+            TextView nm = new TextView(ctx);
+            nm.setText("\uD83D\uDCFF  " + it.name);
+            nm.setTextSize(16);
+            nm.setTextColor(textColor);
+            if (it == current) {
+                nm.setTypeface(AndroidUtilities.bold());
+            }
+            row.addView(nm, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView cnt = new TextView(ctx);
+            cnt.setText(it.target > 0 ? it.count + "/" + it.target : String.valueOf(it.count));
+            cnt.setTextSize(15);
+            cnt.setTypeface(AndroidUtilities.bold());
+            cnt.setTextColor(accent);
+            cnt.setPadding(dp(12), 0, 0, 0);
+            row.addView(cnt, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            row.setOnClickListener(v -> {
+                selectedId = it.id;
+                showIndex = false;
+                save();
+                render();
+            });
+            card.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            View line = new View(ctx);
+            line.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 22));
+            card.addView(line, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        }
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLp.leftMargin = dp(16);
+        cardLp.rightMargin = dp(16);
+        content.addView(card, cardLp);
+
+        LinearLayout actions = new LinearLayout(ctx);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        TextView back = pill("\u2190 " + t("Orqaga", "Назад", "Back"), cardColor, textColor);
+        back.setOnClickListener(v -> {
+            showIndex = false;
+            render();
+        });
+        TextView add = pill("\uD83D\uDCFF + " + t("Tasbeh", "Тасбих", "Tasbih"), accent, Color.WHITE);
+        add.setTypeface(AndroidUtilities.bold());
+        add.setOnClickListener(v -> {
+            showIndex = false;
+            showDialog(null);
+        });
+        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        backLp.rightMargin = dp(10);
+        actions.addView(back, backLp);
+        actions.addView(add, new LinearLayout.LayoutParams(0, dp(46), 1.4f));
+        LinearLayout.LayoutParams actionsLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        actionsLp.topMargin = dp(16);
+        actionsLp.leftMargin = dp(16);
+        actionsLp.rightMargin = dp(16);
+        content.addView(actions, actionsLp);
+    }
+
+    private void confirmDeleteItem(final Item item) {
+        final Activity activity = fragment.getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        new AlertDialog.Builder(activity)
+                .setMessage(t("\"" + item.name + "\" tasbehi o'chirilsinmi?",
+                        "Удалить тасбих \"" + item.name + "\"?",
+                        "Delete the tasbih \"" + item.name + "\"?"))
+                .setPositiveButton(t("O'chirish", "Удалить", "Delete"), (dialog, which) -> {
+                    items.remove(item);
+                    selectedId = items.isEmpty() ? null : items.get(0).id;
+                    save();
+                    render();
+                })
+                .setNegativeButton(t("Bekor qilish", "Отмена", "Cancel"), null)
+                .show();
     }
 
     private View statCell(TextView value, String label) {
@@ -432,6 +616,9 @@ public class TaqvimTasbeh extends FrameLayout {
         counterView.performHapticFeedback(reached
                 ? HapticFeedbackConstants.LONG_PRESS
                 : HapticFeedbackConstants.KEYBOARD_TAP);
+        if (reached) {
+            counterView.burst();
+        }
         save();
         updateStats();
     }
@@ -587,6 +774,54 @@ public class TaqvimTasbeh extends FrameLayout {
             hint.setTextSize(dp(16));
         }
 
+        private static final int PARTICLES = 46;
+        private final float[] pAngle = new float[PARTICLES];
+        private final float[] pSpeed = new float[PARTICLES];
+        private final float[] pSize = new float[PARTICLES];
+        private final float[] pSpin = new float[PARTICLES];
+        private final int[] pColor = new int[PARTICLES];
+        private final Paint confetti = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Random random = new Random();
+        private ValueAnimator burstAnimator;
+        private float burstT = -1f;
+
+        /** Confetti flying out of the circle when the target is reached. */
+        void burst() {
+            final int[] colors = {0xFFFFC107, 0xFFFF5252, 0xFF69F0AE, 0xFF40C4FF, 0xFFE040FB, 0xFFFFFFFF, 0xFFFF9800};
+            for (int i = 0; i < PARTICLES; i++) {
+                pAngle[i] = (float) (random.nextFloat() * Math.PI * 2);
+                pSpeed[i] = 0.45f + random.nextFloat() * 0.55f;
+                pSize[i] = dp(4) + random.nextFloat() * dp(5);
+                pSpin[i] = random.nextFloat() * 360f;
+                pColor[i] = colors[random.nextInt(colors.length)];
+            }
+            if (burstAnimator != null) {
+                burstAnimator.cancel();
+            }
+            burstAnimator = ValueAnimator.ofFloat(0f, 1f);
+            burstAnimator.setDuration(1500);
+            burstAnimator.addUpdateListener(a -> {
+                burstT = (float) a.getAnimatedValue();
+                invalidate();
+            });
+            burstAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    burstT = -1f;
+                    invalidate();
+                }
+            });
+            burstAnimator.start();
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            if (burstAnimator != null) {
+                burstAnimator.cancel();
+            }
+        }
+
         void setValues(int count, int target) {
             this.count = count;
             this.target = target;
@@ -635,6 +870,21 @@ public class TaqvimTasbeh extends FrameLayout {
             final String below = target > 0 ? "/ " + target : "";
             if (!below.isEmpty()) {
                 canvas.drawText(below, cx, cy + dp(52), hint);
+            }
+
+            if (burstT >= 0f) {
+                final float reach = Math.min(cx, cy) - dp(6);
+                for (int i = 0; i < PARTICLES; i++) {
+                    final float dist = reach * pSpeed[i] * (1f - (1f - burstT) * (1f - burstT));
+                    final float x = cx + (float) Math.cos(pAngle[i]) * dist;
+                    final float py = cy + (float) Math.sin(pAngle[i]) * dist + dp(30) * burstT * burstT;
+                    confetti.setColor(pColor[i]);
+                    confetti.setAlpha((int) (255 * Math.min(1f, (1f - burstT) * 2.2f)));
+                    canvas.save();
+                    canvas.rotate(pSpin[i] + burstT * 360f, x, py);
+                    canvas.drawRect(x - pSize[i], py - pSize[i] / 2f, x + pSize[i], py + pSize[i] / 2f, confetti);
+                    canvas.restore();
+                }
             }
         }
     }
