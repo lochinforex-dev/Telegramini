@@ -48,7 +48,7 @@ public class TaqvimTasbeh extends FrameLayout {
 
     private static final String PREFS = "taqvim_tasbeh";
     private static final int MAX_ITEMS = 30;
-    private static final int MAX_NAME = 40;
+    private static final int MAX_NAME = 300;
     private static final int MAX_TARGET = 1000000;
     private static final int MAX_COUNT = 99999999;
     private static final int MAX_DAYS_KEPT = 60;
@@ -475,8 +475,8 @@ public class TaqvimTasbeh extends FrameLayout {
         }
 
         final EditText nameInput = new EditText(activity);
-        nameInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        nameInput.setSingleLine(true);
+        nameInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        nameInput.setMaxLines(4);
         nameInput.setHint(t("Nomi", "Название", "Name"));
         if (existing != null) {
             nameInput.setText(existing.name);
