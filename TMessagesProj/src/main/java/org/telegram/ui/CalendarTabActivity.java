@@ -33,7 +33,9 @@ import org.telegram.ui.ActionBar.Theme;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -47,14 +49,19 @@ import java.util.Map;
 public class CalendarTabActivity extends BaseFragment {
 
     private static final int HOLIDAY_COLOR = 0xFFE53935;
+    private static final int TASK_COLOR = 0xFFF5A623;
+    private static final int DEBT_COLOR = 0xFF8E5BD8;
 
     private TextView selectedDateText;
     private MonthView monthView;
     private LinearLayout infoPanel;
 
-    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar, 2 = Tasbeh
+    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar, 2 = Qarzlar, 3 = Tasbeh
     private int currentPage = 0;
     private View[] pages;
+    private Context pageContext;
+    private HashSet<Integer> taskDays = new HashSet<>();
+    private HashSet<Integer> debtDays = new HashSet<>();
     private TextView[] pageTabs;
     private int pageTabBg;
 
@@ -214,6 +221,7 @@ public class CalendarTabActivity extends BaseFragment {
         final String[] names = {
                 t("Kalendar", "Календарь", "Calendar"),
                 t("Vazifalar", "Задачи", "Tasks"),
+                t("Qarzlar", "Долги", "Debts"),
                 t("Tasbeh", "Тасбих", "Tasbih")
         };
         pageTabs = new TextView[names.length];
@@ -221,7 +229,7 @@ public class CalendarTabActivity extends BaseFragment {
             final int index = i;
             TextView tab = new TextView(context);
             tab.setText(names[i]);
-            tab.setTextSize(14);
+            tab.setTextSize(13);
             tab.setGravity(Gravity.CENTER);
             tab.setPadding(0, dp(9), 0, dp(9));
             tab.setOnClickListener(v -> selectPage(index));
@@ -239,6 +247,7 @@ public class CalendarTabActivity extends BaseFragment {
         pages = new View[]{
                 buildCalendarPage(context, bg, cardColor),
                 new TaqvimVazifalar(this, context, textColor, accent, cardColor),
+                new TaqvimQarzlar(this, context, textColor, accent, cardColor),
                 new TaqvimTasbeh(this, context, textColor, accent, cardColor)
         };
         for (View page : pages) {
@@ -246,14 +255,31 @@ public class CalendarTabActivity extends BaseFragment {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
 
+        pageContext = context;
         selectPage(currentPage);
 
         fragmentView = host;
         return fragmentView;
     }
 
+    /** Reads the due dates of tasks and debts again (they may have changed on the other pages). */
+    private void refreshMarks() {
+        if (pageContext == null) {
+            return;
+        }
+        taskDays = TaqvimVazifalar.dueKeys(pageContext);
+        debtDays = TaqvimQarzlar.dueKeys(pageContext);
+        if (monthView != null) {
+            monthView.invalidate();
+            updateInfo();
+        }
+    }
+
     private void selectPage(int index) {
         currentPage = index;
+        if (index == 0) {
+            refreshMarks();
+        }
         if (pages != null) {
             for (int i = 0; i < pages.length; i++) {
                 pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
@@ -309,6 +335,16 @@ public class CalendarTabActivity extends BaseFragment {
             @Override
             public boolean hasNote(int y, int m0, int d) {
                 return notes.containsKey(keyOf(y, m0, d));
+            }
+
+            @Override
+            public boolean hasTask(int y, int m0, int d) {
+                return taskDays.contains(y * 10000 + (m0 + 1) * 100 + d);
+            }
+
+            @Override
+            public boolean hasDebt(int y, int m0, int d) {
+                return debtDays.contains(y * 10000 + (m0 + 1) * 100 + d);
             }
         });
         monthView.setListener(this::onDaySelected);
@@ -390,7 +426,16 @@ public class CalendarTabActivity extends BaseFragment {
         if (note != null) {
             infoPanel.addView(makeLine(ctx, accent, note));
         }
-        if (holiday == null && note == null) {
+        final int dayKey = y * 10000 + (m0 + 1) * 100 + d;
+        final ArrayList<String> taskLines = TaqvimVazifalar.tasksOn(ctx, dayKey);
+        for (String line : taskLines) {
+            infoPanel.addView(makeLine(ctx, TASK_COLOR, line));
+        }
+        final ArrayList<String> debtLines = TaqvimQarzlar.debtsOn(ctx, dayKey);
+        for (String line : debtLines) {
+            infoPanel.addView(makeLine(ctx, DEBT_COLOR, t("Qarz: ", "Долг: ", "Debt: ") + line));
+        }
+        if (holiday == null && note == null && taskLines.isEmpty() && debtLines.isEmpty()) {
             TextView empty = new TextView(ctx);
             empty.setTextSize(15);
             empty.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
@@ -468,6 +513,10 @@ public class CalendarTabActivity extends BaseFragment {
             boolean isHoliday(int y, int m0, int d);
 
             boolean hasNote(int y, int m0, int d);
+
+            boolean hasTask(int y, int m0, int d);
+
+            boolean hasDebt(int y, int m0, int d);
         }
 
         private static final int HEADER_DP = 56;
@@ -483,6 +532,7 @@ public class CalendarTabActivity extends BaseFragment {
         private final Paint arrowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint holidayDot = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint whiteDot = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint markPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
 
         private final int textColor;
@@ -706,18 +756,22 @@ public class CalendarTabActivity extends BaseFragment {
                 canvas.drawText(Integer.toString(day), cx, cyDay + dp(6), p);
                 textPaint.setColor(textColor);
 
-                // Dots under the number: red = holiday, accent = personal note
+                // Dots under the number: red = holiday, accent = note, orange = task, purple = debt
+                final boolean task = info != null && info.hasTask(shownYear, shownMonth, day);
+                final boolean debt = info != null && info.hasDebt(shownYear, shownMonth, day);
+                final int[] colors = new int[4];
+                int dots = 0;
+                if (holiday) colors[dots++] = HOLIDAY_COLOR;
+                if (note) colors[dots++] = accent;
+                if (task) colors[dots++] = TASK_COLOR;
+                if (debt) colors[dots++] = DEBT_COLOR;
                 final float dotY = cyDay + dp(15);
                 final float dotR = dp(2.5f);
-                final Paint holidayPaint = isToday ? whiteDot : holidayDot;
-                final Paint notePaint = isToday ? whiteDot : accentFill;
-                if (holiday && note) {
-                    canvas.drawCircle(cx - dp(4), dotY, dotR, holidayPaint);
-                    canvas.drawCircle(cx + dp(4), dotY, dotR, notePaint);
-                } else if (holiday) {
-                    canvas.drawCircle(cx, dotY, dotR, holidayPaint);
-                } else if (note) {
-                    canvas.drawCircle(cx, dotY, dotR, notePaint);
+                final float gap = dp(7);
+                final float firstX = cx - (dots - 1) * gap / 2f;
+                for (int i = 0; i < dots; i++) {
+                    markPaint.setColor(isToday ? 0xFFFFFFFF : colors[i]);
+                    canvas.drawCircle(firstX + i * gap, dotY, dotR, markPaint);
                 }
             }
         }

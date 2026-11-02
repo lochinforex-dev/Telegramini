@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -241,11 +240,8 @@ public class TaqvimTasbeh extends FrameLayout {
         }
         final Item item = current;
 
-        // chips: the user's tasbeh names + "add"
-        HorizontalScrollView chipsScroll = new HorizontalScrollView(ctx);
-        chipsScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout chips = new LinearLayout(ctx);
-        chips.setOrientation(LinearLayout.HORIZONTAL);
+        // chips: the user's tasbeh names + "add" (wrap to new lines, long names stay fully visible)
+        FlowLayout chips = new FlowLayout(ctx, dp(8), dp(8));
         chips.setPadding(dp(16), 0, dp(16), 0);
         for (final Item it : items) {
             final boolean on = it == item;
@@ -256,19 +252,15 @@ public class TaqvimTasbeh extends FrameLayout {
                 save();
                 render();
             });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.rightMargin = dp(8);
-            chips.addView(chip, lp);
+            chips.addView(chip, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
         TextView add = pill("+ " + t("Yangi", "Новый", "New"), ColorUtils.setAlphaComponent(accent, 36), accent);
         add.setPadding(dp(16), dp(9), dp(16), dp(9));
         add.setOnClickListener(v -> showDialog(null));
-        chips.addView(add, new LinearLayout.LayoutParams(
+        chips.addView(add, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        chipsScroll.addView(chips, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        content.addView(chipsScroll, new LinearLayout.LayoutParams(
+        content.addView(chips, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // name and target
@@ -643,6 +635,64 @@ public class TaqvimTasbeh extends FrameLayout {
             final String below = target > 0 ? "/ " + target : "";
             if (!below.isEmpty()) {
                 canvas.drawText(below, cx, cy + dp(52), hint);
+            }
+        }
+    }
+
+    /** Simple wrapping layout: children go left to right and continue on the next line. */
+    private static class FlowLayout extends ViewGroup {
+        private final int hGap;
+        private final int vGap;
+
+        FlowLayout(Context context, int hGap, int vGap) {
+            super(context);
+            this.hGap = hGap;
+            this.vGap = vGap;
+        }
+
+        @Override
+        protected void onMeasure(int widthSpec, int heightSpec) {
+            int maxW = MeasureSpec.getSize(widthSpec) - getPaddingLeft() - getPaddingRight();
+            int x = 0, y = 0, rowH = 0, usedW = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View c = getChildAt(i);
+                if (c.getVisibility() == GONE) continue;
+                c.measure(MeasureSpec.makeMeasureSpec(maxW, MeasureSpec.AT_MOST),
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                int w = c.getMeasuredWidth();
+                int h = c.getMeasuredHeight();
+                if (x > 0 && x + w > maxW) {
+                    x = 0;
+                    y += rowH + vGap;
+                    rowH = 0;
+                }
+                x += w + hGap;
+                rowH = Math.max(rowH, h);
+                usedW = Math.max(usedW, Math.min(maxW, x - hGap));
+            }
+            int height = y + rowH + getPaddingTop() + getPaddingBottom();
+            setMeasuredDimension(MeasureSpec.getSize(widthSpec), height);
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int l, int t, int r, int b) {
+            int maxW = r - l - getPaddingLeft() - getPaddingRight();
+            int x = 0, y = 0, rowH = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View c = getChildAt(i);
+                if (c.getVisibility() == GONE) continue;
+                int w = c.getMeasuredWidth();
+                int h = c.getMeasuredHeight();
+                if (x > 0 && x + w > maxW) {
+                    x = 0;
+                    y += rowH + vGap;
+                    rowH = 0;
+                }
+                int left = getPaddingLeft() + x;
+                int top = getPaddingTop() + y;
+                c.layout(left, top, left + w, top + h);
+                x += w + hGap;
+                rowH = Math.max(rowH, h);
             }
         }
     }
