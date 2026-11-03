@@ -9,10 +9,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -250,161 +252,96 @@ public class TaqvimTasbeh extends FrameLayout {
             return;
         }
 
-        // header: position in the list + delete
         final int position = items.indexOf(item) + 1;
+
+        // header: [contents]  name  [edit]
         LinearLayout header = new LinearLayout(ctx);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(22), dp(6), dp(14), 0);
+        header.setPadding(dp(14), dp(4), dp(14), 0);
+
+        TextView tocBtn = roundIcon("\u2630");
+        tocBtn.setOnClickListener(v -> {
+            showIndex = true;
+            render();
+        });
+        header.addView(tocBtn, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        LinearLayout titleBox = new LinearLayout(ctx);
+        titleBox.setOrientation(LinearLayout.VERTICAL);
+        titleBox.setGravity(Gravity.CENTER);
+        titleBox.setPadding(dp(8), 0, dp(8), 0);
+        titleBox.setOnClickListener(v -> {
+            showIndex = true;
+            render();
+        });
         TextView pos = new TextView(ctx);
         pos.setText(position + " / " + items.size());
-        pos.setTextSize(15);
-        pos.setTypeface(AndroidUtilities.bold());
-        pos.setTextColor(accent);
-        header.addView(pos, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView trash = new TextView(ctx);
-        trash.setText("\uD83D\uDDD1");
-        trash.setTextSize(20);
-        trash.setGravity(Gravity.CENTER);
-        trash.setAlpha(0.6f);
-        trash.setOnClickListener(v -> confirmDeleteItem(item));
-        header.addView(trash, new LinearLayout.LayoutParams(dp(40), dp(40)));
-        content.addView(header, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        // name and target
+        pos.setTextSize(12);
+        pos.setLetterSpacing(0.08f);
+        pos.setTextColor(ColorUtils.setAlphaComponent(textColor, 130));
+        pos.setGravity(Gravity.CENTER);
+        titleBox.addView(pos, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView name = new TextView(ctx);
         name.setText(item.name);
-        name.setTextSize(20);
+        name.setTextSize(item.name.length() > 30 ? 16 : 19);
         name.setTypeface(AndroidUtilities.bold());
         name.setTextColor(textColor);
         name.setGravity(Gravity.CENTER);
-        name.setPadding(dp(18), dp(16), dp(18), dp(16));
-        name.setBackground(Theme.createRoundRectDrawable(dp(18), cardColor));
-        name.setOnClickListener(v -> showDialog(item));
-        LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        nameLp.leftMargin = dp(16);
-        nameLp.rightMargin = dp(16);
-        nameLp.topMargin = dp(6);
-        content.addView(name, nameLp);
-
-        TextView sub = new TextView(ctx);
-        sub.setTextSize(14);
-        sub.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
-        sub.setGravity(Gravity.CENTER);
-        sub.setText(item.target > 0
-                ? t("Maqsad: ", "Цель: ", "Target: ") + item.target
-                : t("Maqsadsiz, cheksiz sanaydi", "Без цели, считает без предела", "No target, counts without limit"));
-        sub.setPadding(dp(24), dp(4), dp(24), 0);
-        content.addView(sub, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        // quick target chooser
-        final int[] presets = {33, 99, 100, 500, 1000, 0};
-        FlowLayout targets = new FlowLayout(ctx, dp(8), dp(8));
-        targets.setPadding(dp(24), dp(14), dp(24), 0);
-        for (final int preset : presets) {
-            final boolean on = item.target == preset;
-            String label = preset == 0 ? "\u221E" : String.valueOf(preset);
-            TextView chip = pill(label, on ? accent : cardColor, on ? Color.WHITE : textColor);
-            chip.setPadding(dp(14), dp(7), dp(14), dp(7));
-            chip.setOnClickListener(v -> {
-                item.target = preset;
-                save();
-                render();
-            });
-            targets.addView(chip, new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-        TextView other = pill("\u270E " + t("Boshqa", "Другое", "Other"), cardColor, textColor);
-        other.setPadding(dp(14), dp(7), dp(14), dp(7));
-        other.setOnClickListener(v -> showDialog(item));
-        targets.addView(other, new ViewGroup.LayoutParams(
+        titleBox.addView(name, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        content.addView(targets, new LinearLayout.LayoutParams(
+        header.addView(titleBox, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView editBtn = roundIcon("\u270E");
+        editBtn.setOnClickListener(v -> showDialog(item));
+        header.addView(editBtn, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        content.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // the big counter
+        // the big counter: one huge tap surface
         counterView = new CounterView(ctx, accent);
         counterView.setValues(item.count, item.target);
         counterView.setOnTouchListener((view, event) -> {
             final int action = event.getAction();
             if (action == MotionEvent.ACTION_DOWN) {
-                view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(70).start();
+                view.animate().scaleX(0.97f).scaleY(0.97f).setDuration(60).start();
             } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-                view.animate().scaleX(1f).scaleY(1f).setDuration(110).start();
+                view.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
             }
             return false;
         });
         counterView.setOnClickListener(v -> onTap());
         LinearLayout.LayoutParams counterLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        counterLp.topMargin = dp(20);
-        counterLp.leftMargin = dp(24);
-        counterLp.rightMargin = dp(24);
+        counterLp.topMargin = dp(6);
+        counterLp.leftMargin = dp(10);
+        counterLp.rightMargin = dp(10);
         content.addView(counterView, counterLp);
 
-        // buttons
+        // two wide buttons: restart | target
         LinearLayout buttons = new LinearLayout(ctx);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
-        buttons.setGravity(Gravity.CENTER);
-        TextView reset = pill("↺ " + t("Boshidan", "Сначала", "Restart"), cardColor, textColor);
+        TextView reset = actionButton("\u21BA", t("Boshidan", "Сначала", "Restart"));
         reset.setOnClickListener(v -> confirmReset());
-        TextView edit = pill("✎ " + t("O'zgartirish", "Изменить", "Edit"), cardColor, textColor);
-        edit.setOnClickListener(v -> showDialog(item));
-        LinearLayout.LayoutParams b1 = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        String targetText = item.target > 0 ? String.valueOf(item.target) : "\u221E";
+        TextView targetBtn = actionButton("\uD83C\uDFAF", t("Maqsad: ", "Цель: ", "Target: ") + targetText);
+        targetBtn.setOnClickListener(v -> showTargetDialog(item));
+        LinearLayout.LayoutParams b1 = new LinearLayout.LayoutParams(0, dp(54), 1f);
         b1.rightMargin = dp(10);
         buttons.addView(reset, b1);
-        buttons.addView(edit, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        buttons.addView(targetBtn, new LinearLayout.LayoutParams(0, dp(54), 1f));
         LinearLayout.LayoutParams buttonsLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        buttonsLp.topMargin = dp(20);
+        buttonsLp.topMargin = dp(14);
+        buttonsLp.leftMargin = dp(16);
+        buttonsLp.rightMargin = dp(16);
         content.addView(buttons, buttonsLp);
-
-        // navigation: previous | contents | next
-        LinearLayout nav = new LinearLayout(ctx);
-        nav.setOrientation(LinearLayout.HORIZONTAL);
-        nav.setGravity(Gravity.CENTER_VERTICAL);
-        final int idx = items.indexOf(item);
-        TextView prev = pill("\u25C0", cardColor, textColor);
-        prev.setOnClickListener(v -> {
-            selectedId = items.get((idx - 1 + items.size()) % items.size()).id;
-            save();
-            render();
-        });
-        TextView next = pill("\u25B6", cardColor, textColor);
-        next.setOnClickListener(v -> {
-            selectedId = items.get((idx + 1) % items.size()).id;
-            save();
-            render();
-        });
-        TextView toc = pill("\u2630 " + t("Mundarija", "Оглавление", "Contents"), ColorUtils.setAlphaComponent(accent, 36), accent);
-        toc.setTypeface(AndroidUtilities.bold());
-        toc.setOnClickListener(v -> {
-            showIndex = true;
-            render();
-        });
-        nav.addView(prev, new LinearLayout.LayoutParams(dp(52), dp(44)));
-        LinearLayout.LayoutParams tocLp = new LinearLayout.LayoutParams(0, dp(44), 1f);
-        tocLp.leftMargin = dp(10);
-        tocLp.rightMargin = dp(10);
-        nav.addView(toc, tocLp);
-        nav.addView(next, new LinearLayout.LayoutParams(dp(52), dp(44)));
-        LinearLayout.LayoutParams navLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        navLp.topMargin = dp(14);
-        navLp.leftMargin = dp(16);
-        navLp.rightMargin = dp(16);
-        content.addView(nav, navLp);
 
         // stats
         LinearLayout stats = new LinearLayout(ctx);
         stats.setOrientation(LinearLayout.HORIZONTAL);
-        stats.setBackground(Theme.createRoundRectDrawable(dp(20), cardColor));
-        stats.setPadding(dp(8), dp(14), dp(8), dp(14));
+        stats.setPadding(dp(8), dp(4), dp(8), dp(4));
         statToday = new TextView(ctx);
         statWeek = new TextView(ctx);
         stats.addView(statCell(statToday, t("Bugun jami", "Сегодня всего", "Today total")),
@@ -413,11 +350,59 @@ public class TaqvimTasbeh extends FrameLayout {
                 new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         LinearLayout.LayoutParams statsLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        statsLp.topMargin = dp(22);
+        statsLp.topMargin = dp(14);
         statsLp.leftMargin = dp(16);
         statsLp.rightMargin = dp(16);
         content.addView(stats, statsLp);
         updateStats();
+    }
+
+    private TextView roundIcon(String symbol) {
+        TextView tv = new TextView(getContext());
+        tv.setText(symbol);
+        tv.setTextSize(19);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextColor(textColor);
+        tv.setBackground(Theme.createRoundRectDrawable(dp(22), cardColor));
+        return tv;
+    }
+
+    private TextView actionButton(String icon, String label) {
+        TextView tv = new TextView(getContext());
+        tv.setText(icon + "  " + label);
+        tv.setTextSize(15);
+        tv.setTypeface(AndroidUtilities.bold());
+        tv.setTextColor(textColor);
+        tv.setGravity(Gravity.CENTER);
+        tv.setSingleLine(true);
+        tv.setBackground(Theme.createRoundRectDrawable(dp(18), cardColor));
+        return tv;
+    }
+
+    private void showTargetDialog(final Item item) {
+        final Activity activity = fragment.getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        final int[] presets = {33, 99, 100, 500, 1000, 0};
+        final String[] labels = new String[presets.length + 1];
+        for (int i = 0; i < presets.length; i++) {
+            String base = presets[i] == 0 ? "\u221E  " + t("Cheksiz", "Без предела", "No limit") : String.valueOf(presets[i]);
+            labels[i] = (item.target == presets[i] ? "\u2713  " : "     ") + base;
+        }
+        labels[presets.length] = "\u270E  " + t("Boshqa son...", "Другое число...", "Other number...");
+        new AlertDialog.Builder(activity)
+                .setTitle(t("Maqsadni tanlang", "Выберите цель", "Choose a target"))
+                .setItems(labels, (dialog, which) -> {
+                    if (which < presets.length) {
+                        item.target = presets[which];
+                        save();
+                        render();
+                    } else {
+                        showDialog(item);
+                    }
+                })
+                .show();
     }
 
     /** The "Mundarija" page: all tasbehs in a list. */
@@ -612,6 +597,7 @@ public class TaqvimTasbeh extends FrameLayout {
         days.put(key, (old == null ? 0 : old) + 1);
 
         counterView.setValues(item.count, item.target);
+        counterView.pulse();
         final boolean reached = item.target > 0 && item.count == item.target;
         counterView.performHapticFeedback(reached
                 ? HapticFeedbackConstants.LONG_PRESS
@@ -739,51 +725,89 @@ public class TaqvimTasbeh extends FrameLayout {
 
     private static class CounterView extends View {
 
+        private static final int BEADS = 60;
+        private static final int PARTICLES = 46;
+
         private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint ringBg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint gloss = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint bead = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint number = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint hint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF rect = new RectF();
+        private final Paint wave = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint confetti = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Random random = new Random();
         private final int accent;
 
         private int count;
         private int target;
         private Shader shader;
 
-        CounterView(Context context, int accent) {
-            super(context);
-            this.accent = accent;
+        // tap animation: number pop + expanding wave
+        private float popT = 1f;
+        private float waveT = -1f;
+        private ValueAnimator pulseAnimator;
 
-            ringBg.setStyle(Paint.Style.STROKE);
-            ringBg.setStrokeWidth(dp(7));
-            ringBg.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 70));
-            ringBg.setStrokeCap(Paint.Cap.ROUND);
-
-            ring.setStyle(Paint.Style.STROKE);
-            ring.setStrokeWidth(dp(7));
-            ring.setColor(Color.WHITE);
-            ring.setStrokeCap(Paint.Cap.ROUND);
-
-            number.setColor(Color.WHITE);
-            number.setTextAlign(Paint.Align.CENTER);
-            number.setTypeface(AndroidUtilities.bold());
-
-            hint.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 210));
-            hint.setTextAlign(Paint.Align.CENTER);
-            hint.setTextSize(dp(16));
-        }
-
-        private static final int PARTICLES = 46;
+        // confetti
         private final float[] pAngle = new float[PARTICLES];
         private final float[] pSpeed = new float[PARTICLES];
         private final float[] pSize = new float[PARTICLES];
         private final float[] pSpin = new float[PARTICLES];
         private final int[] pColor = new int[PARTICLES];
-        private final Paint confetti = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Random random = new Random();
         private ValueAnimator burstAnimator;
         private float burstT = -1f;
+
+        CounterView(Context context, int accent) {
+            super(context);
+            this.accent = accent;
+            setLayerType(LAYER_TYPE_SOFTWARE, null);
+
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(dp(1.5f));
+            edge.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 60));
+
+            wave.setStyle(Paint.Style.STROKE);
+            wave.setStrokeWidth(dp(3));
+
+            number.setColor(Color.WHITE);
+            number.setTextAlign(Paint.Align.CENTER);
+            number.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+
+            hint.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 200));
+            hint.setTextAlign(Paint.Align.CENTER);
+            hint.setTextSize(dp(18));
+            hint.setLetterSpacing(0.06f);
+        }
+
+        void setValues(int count, int target) {
+            this.count = count;
+            this.target = target;
+            invalidate();
+        }
+
+        /** Called on every tap: the number pops and a soft wave leaves the circle. */
+        void pulse() {
+            if (pulseAnimator != null) {
+                pulseAnimator.cancel();
+            }
+            pulseAnimator = ValueAnimator.ofFloat(0f, 1f);
+            pulseAnimator.setDuration(480);
+            pulseAnimator.addUpdateListener(a -> {
+                final float v = (float) a.getAnimatedValue();
+                popT = v;
+                waveT = v;
+                invalidate();
+            });
+            pulseAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    popT = 1f;
+                    waveT = -1f;
+                    invalidate();
+                }
+            });
+            pulseAnimator.start();
+        }
 
         /** Confetti flying out of the circle when the target is reached. */
         void burst() {
@@ -820,25 +844,23 @@ public class TaqvimTasbeh extends FrameLayout {
             if (burstAnimator != null) {
                 burstAnimator.cancel();
             }
-        }
-
-        void setValues(int count, int target) {
-            this.count = count;
-            this.target = target;
-            invalidate();
+            if (pulseAnimator != null) {
+                pulseAnimator.cancel();
+            }
         }
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            final int size = Math.min(MeasureSpec.getSize(widthMeasureSpec), dp(290));
+            final int size = Math.min(MeasureSpec.getSize(widthMeasureSpec), dp(400));
             setMeasuredDimension(size, size);
         }
 
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
-            shader = new RadialGradient(w / 2f, h / 2f, Math.max(1, w / 2f),
-                    ColorUtils.blendARGB(accent, Color.WHITE, 0.22f), accent, Shader.TileMode.CLAMP);
+            shader = new LinearGradient(0, 0, w, h,
+                    ColorUtils.blendARGB(accent, Color.WHITE, 0.20f),
+                    ColorUtils.blendARGB(accent, Color.BLACK, 0.28f), Shader.TileMode.CLAMP);
         }
 
         @Override
@@ -846,43 +868,72 @@ public class TaqvimTasbeh extends FrameLayout {
             super.onDraw(canvas);
             final float cx = getWidth() / 2f;
             final float cy = getHeight() / 2f;
-            final float r = Math.min(cx, cy) - dp(4);
+            final float r = Math.min(cx, cy) - dp(16);
 
+            // soft shadow + body
             fill.setShader(shader);
+            fill.setShadowLayer(dp(18), 0, dp(10), ColorUtils.setAlphaComponent(accent, 110));
             canvas.drawCircle(cx, cy, r, fill);
+            fill.clearShadowLayer();
 
-            final float rr = r - dp(18);
-            rect.set(cx - rr, cy - rr, cx + rr, cy + rr);
-            canvas.drawArc(rect, 0, 360, false, ringBg);
+            // light from the top
+            gloss.setShader(new RadialGradient(cx, cy - r * 0.55f, r * 1.1f,
+                    ColorUtils.setAlphaComponent(Color.WHITE, 70), Color.TRANSPARENT, Shader.TileMode.CLAMP));
+            canvas.drawCircle(cx, cy, r, gloss);
+            canvas.drawCircle(cx, cy, r - dp(1), edge);
+
+            // beads around the circle: they light up as you count
+            int lit;
             if (target > 0) {
-                final float sweep = 360f * Math.min(1f, count / (float) target);
-                if (sweep > 0) {
-                    canvas.drawArc(rect, -90, sweep, false, ring);
-                }
+                lit = Math.round(BEADS * Math.min(1f, count / (float) target));
+            } else {
+                lit = count == 0 ? 0 : ((count - 1) % BEADS) + 1;
+            }
+            final float beadR = r - dp(22);
+            for (int i = 0; i < BEADS; i++) {
+                final double ang = -Math.PI / 2 + i * 2 * Math.PI / BEADS;
+                final float bx = cx + (float) Math.cos(ang) * beadR;
+                final float by = cy + (float) Math.sin(ang) * beadR;
+                final boolean on = i < lit;
+                final boolean head = on && i == lit - 1;
+                bead.setColor(on ? Color.WHITE : ColorUtils.setAlphaComponent(Color.WHITE, 65));
+                canvas.drawCircle(bx, by, head ? dp(5.2f) : (on ? dp(3.2f) : dp(2.4f)), bead);
             }
 
+            // the number
             final String text = String.valueOf(count);
             final int digits = text.length();
-            number.setTextSize(digits <= 3 ? dp(88) : (digits <= 5 ? dp(64) : dp(46)));
-            final float y = cy - (number.descent() + number.ascent()) / 2f - dp(8);
-            canvas.drawText(text, cx, y, number);
+            final float size = digits <= 3 ? dp(112) : (digits <= 5 ? dp(80) : dp(56));
+            number.setTextSize(size);
+            final float scale = 1f + 0.10f * (1f - popT) * (1f - popT);
+            final float baseline = cy - (number.descent() + number.ascent()) / 2f - dp(12);
+            canvas.save();
+            canvas.scale(scale, scale, cx, cy);
+            canvas.drawText(text, cx, baseline, number);
+            canvas.restore();
 
-            final String below = target > 0 ? "/ " + target : "";
-            if (!below.isEmpty()) {
-                canvas.drawText(below, cx, cy + dp(52), hint);
+            // under the number
+            final String below = target > 0 ? "/ " + target : "\u221E";
+            canvas.drawText(below, cx, baseline + size * 0.34f + dp(10), hint);
+
+            // wave
+            if (waveT >= 0f) {
+                wave.setColor(ColorUtils.setAlphaComponent(Color.WHITE, (int) (150 * (1f - waveT))));
+                canvas.drawCircle(cx, cy, r + dp(12) * waveT, wave);
             }
 
+            // confetti
             if (burstT >= 0f) {
                 final float reach = Math.min(cx, cy) - dp(6);
                 for (int i = 0; i < PARTICLES; i++) {
                     final float dist = reach * pSpeed[i] * (1f - (1f - burstT) * (1f - burstT));
-                    final float x = cx + (float) Math.cos(pAngle[i]) * dist;
+                    final float px = cx + (float) Math.cos(pAngle[i]) * dist;
                     final float py = cy + (float) Math.sin(pAngle[i]) * dist + dp(30) * burstT * burstT;
                     confetti.setColor(pColor[i]);
                     confetti.setAlpha((int) (255 * Math.min(1f, (1f - burstT) * 2.2f)));
                     canvas.save();
-                    canvas.rotate(pSpin[i] + burstT * 360f, x, py);
-                    canvas.drawRect(x - pSize[i], py - pSize[i] / 2f, x + pSize[i], py + pSize[i] / 2f, confetti);
+                    canvas.rotate(pSpin[i] + burstT * 360f, px, py);
+                    canvas.drawRect(px - pSize[i], py - pSize[i] / 2f, px + pSize[i], py + pSize[i] / 2f, confetti);
                     canvas.restore();
                 }
             }
