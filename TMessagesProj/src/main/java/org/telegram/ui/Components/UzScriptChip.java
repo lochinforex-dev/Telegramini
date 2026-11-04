@@ -15,6 +15,7 @@ import android.text.TextWatcher;
 import android.text.style.ReplacementSpan;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.PopupWindow;
@@ -140,11 +141,11 @@ public class UzScriptChip {
             chip.setBackground(bg);
             chip.setOnClickListener(v -> showMenu());
 
-            popup = new PopupWindow(chip, PopupWindow.LayoutParams.WRAP_CONTENT, PopupWindow.LayoutParams.WRAP_CONTENT);
+            popup = new PopupWindow(chip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             popup.setFocusable(false);
             popup.setOutsideTouchable(false);
             popup.setTouchable(true);
-            popup.setInputMethodMode(PopupWindow.INPUT_METHOD_MODE_NOT_NEEDED);
+            popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
             popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             popup.setElevation(dp(6));
         }
