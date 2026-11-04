@@ -32,10 +32,50 @@ import java.util.ArrayList;
  */
 public class UzScriptChip {
 
+    private static final java.util.WeakHashMap<View, Boolean> ATTACHED = new java.util.WeakHashMap<>();
+
     public static void attach(EditText edit) {
-        if (edit != null) {
+        if (edit != null && ATTACHED.put(edit, Boolean.TRUE) == null) {
             new UzScriptChip(edit);
         }
+    }
+
+    /**
+     * Safer variant: give the whole input panel (ChatActivityEnterView, "this").
+     * The message field is looked up inside it a moment later, when it surely exists.
+     */
+    public static void attachTo(final View root) {
+        if (root == null) {
+            return;
+        }
+        final Handler h = new Handler(Looper.getMainLooper());
+        final int[] tries = {0};
+        final Runnable[] finder = new Runnable[1];
+        finder[0] = () -> {
+            EditText found = findEdit(root);
+            if (found != null) {
+                attach(found);
+            } else if (++tries[0] < 30) {
+                h.postDelayed(finder[0], 300);
+            }
+        };
+        h.post(finder[0]);
+    }
+
+    private static EditText findEdit(View v) {
+        if (v instanceof EditText) {
+            return (EditText) v;
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                EditText r = findEdit(g.getChildAt(i));
+                if (r != null) {
+                    return r;
+                }
+            }
+        }
+        return null;
     }
 
     private final EditText edit;
