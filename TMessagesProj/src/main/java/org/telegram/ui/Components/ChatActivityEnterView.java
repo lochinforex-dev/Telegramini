@@ -2793,6 +2793,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             attachLayout.setClipChildren(false);
             messageEditTextContainer.addView(attachLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
                         // FastMessenger: Tez javoblar tugmasi
+            org.telegram.ui.Components.UzScriptChip.attach(messageEditText);
             android.widget.TextView fmQuickButton = new android.widget.TextView(context);
             fmQuickButton.setText("\u26A1");
             fmQuickButton.setTextSize(20);
