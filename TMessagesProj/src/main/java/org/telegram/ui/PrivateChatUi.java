@@ -87,11 +87,34 @@ public class PrivateChatUi {
         final PrivateChatController controller = PrivateChatController.getInstance();
         if (controller.isLocked(dialogId)) {
             toast(context, "Bu chat allaqachon maxfiy ro'yxatda");
-        } else if (!controller.hasPassword()) {
-            createPassword(context, () -> lockNow(context, dialogId, onChanged));
         } else {
-            lockNow(context, dialogId, onChanged);
+            // before the first chat is made private, tell the user about the ad
+            confirmAdNotice(context, () -> {
+                if (!controller.hasPassword()) {
+                    createPassword(context, () -> lockNow(context, dialogId, onChanged));
+                } else {
+                    lockNow(context, dialogId, onChanged);
+                }
+            });
         }
+    }
+
+    private static void confirmAdNotice(Context context, Runnable onOk) {
+        final PrivateChatController controller = PrivateChatController.getInstance();
+        if (controller.hasSeenAdNotice()) {
+            onOk.run();
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Eslatma");
+        builder.setMessage("Maxfiy chatlarni ochish uchun har 3 kunda bir marta 5 soniyalik reklama ko'rasiz. "
+                + "Chatni istalgan vaqtda reklamasiz maxfiy ro'yxatdan chiqarishingiz mumkin.");
+        builder.setPositiveButton("Tushundim, davom etish", (d, w) -> {
+            controller.setAdNoticeSeen();
+            onOk.run();
+        });
+        builder.setNegativeButton("Bekor qilish", null);
+        builder.create().show();
     }
 
     private static void lockNow(Context context, long dialogId, Runnable onChanged) {
@@ -240,10 +263,10 @@ public class PrivateChatUi {
     // ---------- opening a locked chat ----------
 
     public static void requestUnlock(Context context, long dialogId, Runnable onSuccess) {
-        askPassword(context, "Bu chat maxfiy. Ochish uchun parolni kiriting", () -> {
+        askPassword(context, "Bu chat maxfiy. Ochish uchun parolni kiriting", () -> PrivateAdGate.ensureAdPass(context, () -> {
             PrivateChatController.getInstance().markUnlocked(dialogId);
             onSuccess.run();
-        }, null);
+        }), null);
     }
 
     // ---------- dialogs ----------
