@@ -661,6 +661,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     private ImageView notifyButton;
     @Nullable
     private ImageView scheduledButton;
+    private boolean fmQuickButtonShown; // FastMessenger: the lightning button takes one slot in the panel
     @Nullable
     private ImageView giftButton;
     private boolean scheduleButtonHidden;
@@ -2817,6 +2818,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                     .show();
             });
             attachLayout.addView(fmQuickButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
+            fmQuickButtonShown = true;
 
             if (chatMode != ChatActivity.MODE_WELCOME_MESSAGES) {
                 notifyButton = new ImageView(context);
@@ -3726,6 +3728,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 innerTranslationX = translationX;
                 super.setTranslationX(
                     dp(-DEFAULT_HEIGHT) +
+                    dp(fmQuickButtonShown ? -DEFAULT_HEIGHT : 0) +
                     innerTranslationX + attachLayoutPaddingTranslationX + attachLayoutTranslationX +
                     dp(giftButton != null && giftButton.getVisibility() == View.VISIBLE ? -DEFAULT_HEIGHT : 0) * (giftButton == null ? 0 : giftButton.getAlpha()) +
                     dp(botButton != null && botButton.getVisibility() == VISIBLE ? -DEFAULT_HEIGHT : 0) * (botButton == null ? 0 : botButton.getAlpha())
