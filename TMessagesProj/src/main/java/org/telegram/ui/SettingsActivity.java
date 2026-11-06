@@ -750,9 +750,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
+        items.add(UItem.asShadow(null));
+
+        // the app's own features, in their own card
+        items.add(UItem.asHeader("FastMessenger"));
         items.add(SettingCell.Factory.of(40, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_secret, "Maxfiy chatlar", "Chatni parol bilan qulflash"));
         items.add(SettingCell.Factory.of(41, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.msg_add, TezJavoblarActivity.getTitle(), "Tayyor qisqa javoblar"));
-        
         items.add(UItem.asShadow(null));
         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
             final GramWallet wallet = GramWallet.getInstance(currentAccount);
@@ -982,7 +985,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                     }
                     break;
             }
-            return formatString(R.string.TelegramVersion, String.format(Locale.US, "v%s (%d)\n%s", pInfo.versionName, code, abi));
+            return "FastMessenger for Android " + String.format(Locale.US, "v%s (%d)\n%s", pInfo.versionName, code, abi);
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -2142,4 +2145,4 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     public boolean canParentTabsSlide(MotionEvent ev, boolean forward) {
         return isSwipeBackEnabled(ev);
     }
-}
+}
