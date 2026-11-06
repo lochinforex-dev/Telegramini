@@ -222,4 +222,44 @@ public class PrivateChatController {
     public synchronized void relockAll() {
         unlockedAt.clear();
     }
+
+    // ---------- ad pass: after an ad the private chats open freely for 3 days ----------
+
+    private static final String KEY_PASS_WALL = "ad_pass_wall";
+    private static final String KEY_PASS_ELAPSED = "ad_pass_elapsed";
+    private static final long AD_PASS_MS = 3L * 24 * 60 * 60 * 1000L;
+
+    public synchronized boolean hasAdPass() {
+        long grantedWall = prefs.getLong(KEY_PASS_WALL, 0);
+        if (grantedWall == 0) {
+            return false;
+        }
+        long nowWall = System.currentTimeMillis();
+        if (nowWall < grantedWall) {
+            return false; // the date was set back
+        }
+        long grantedElapsed = prefs.getLong(KEY_PASS_ELAPSED, -1);
+        long nowElapsed = SystemClock.elapsedRealtime();
+        if (grantedElapsed >= 0 && nowElapsed >= grantedElapsed && nowElapsed - grantedElapsed > AD_PASS_MS) {
+            return false; // same boot: the device timer says 3 days have passed
+        }
+        return nowWall - grantedWall <= AD_PASS_MS;
+    }
+
+    public synchronized void grantAdPass() {
+        prefs.edit()
+                .putLong(KEY_PASS_WALL, System.currentTimeMillis())
+                .putLong(KEY_PASS_ELAPSED, SystemClock.elapsedRealtime())
+                .apply();
+    }
+
+    private static final String KEY_AD_NOTICE = "ad_notice_seen";
+
+    public boolean hasSeenAdNotice() {
+        return prefs.getBoolean(KEY_AD_NOTICE, false);
+    }
+
+    public void setAdNoticeSeen() {
+        prefs.edit().putBoolean(KEY_AD_NOTICE, true).apply();
+    }
 }
