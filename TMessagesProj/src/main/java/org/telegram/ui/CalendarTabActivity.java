@@ -56,14 +56,18 @@ public class CalendarTabActivity extends BaseFragment {
     private MonthView monthView;
     private LinearLayout infoPanel;
 
-    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar, 2 = Qarzlar, 3 = Tasbeh
-    private int currentPage = 0;
+    // pages inside the tab: 0 = Kalendar, 1 = Vazifalar, 2 = Qarzlar, 3 = Tasbeh, 4 = Hisoblagich, 5 = bosh sahifa
+    private static final int PAGE_DEBTS = 2;
+    private static final int PAGE_HOME = 5;
+    private int currentPage = PAGE_HOME;
     private View[] pages;
+    private FrameLayout content;
+    private TextView headerTitle;
+    private TextView headerBack;
+    private int cardColorValue;
     private Context pageContext;
     private HashSet<Integer> taskDays = new HashSet<>();
     private HashSet<Integer> debtDays = new HashSet<>();
-    private TextView[] pageTabs;
-    private int pageTabBg;
 
     private SharedPreferences prefs;
     private final Map<String, String> notes = new HashMap<>();
@@ -88,7 +92,7 @@ public class CalendarTabActivity extends BaseFragment {
 
     /** Title follows the Telegram app language. */
     public static String getCalendarTitle() {
-        return t("Taqvim", "Календарь", "Calendar");
+        return t("Kundalik", "Дневник", "Daily");
     }
 
     private static String capitalize(String s) {
@@ -196,59 +200,49 @@ public class CalendarTabActivity extends BaseFragment {
         textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         accent = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int cardColor = ColorUtils.blendARGB(bg, textColor, 0.05f);
-        pageTabBg = bg;
 
         LinearLayout host = new LinearLayout(context);
         host.setOrientation(LinearLayout.VERTICAL);
         host.setBackgroundColor(bg);
         host.setPadding(0, AndroidUtilities.statusBarHeight, 0, 0);
 
-        // Title
-        TextView title = new TextView(context);
-        title.setText(getCalendarTitle());
-        title.setTextSize(28);
-        title.setTypeface(AndroidUtilities.bold());
-        title.setTextColor(textColor);
-        title.setPadding(dp(16), dp(16), dp(16), 0);
-        host.addView(title, new LinearLayout.LayoutParams(
+        // Header: title, and a back arrow on the inner pages
+        LinearLayout header = new LinearLayout(context);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(16), dp(16), dp(16), dp(6));
+
+        headerBack = new TextView(context);
+        headerBack.setText("\u2190");
+        headerBack.setTextSize(26);
+        headerBack.setTextColor(textColor);
+        headerBack.setPadding(0, 0, dp(12), 0);
+        headerBack.setOnClickListener(v -> selectPage(PAGE_HOME));
+        headerBack.setVisibility(View.GONE);
+        header.addView(headerBack, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        headerTitle = new TextView(context);
+        headerTitle.setText(getCalendarTitle());
+        headerTitle.setTextSize(28);
+        headerTitle.setTypeface(AndroidUtilities.bold());
+        headerTitle.setTextColor(textColor);
+        header.addView(headerTitle, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        host.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // Switch between the pages
-        LinearLayout segment = new LinearLayout(context);
-        segment.setOrientation(LinearLayout.HORIZONTAL);
-        segment.setPadding(dp(3), dp(3), dp(3), dp(3));
-        segment.setBackground(Theme.createRoundRectDrawable(dp(13), ColorUtils.blendARGB(bg, textColor, 0.09f)));
-        final String[] names = {
-                t("Kalendar", "Календарь", "Calendar"),
-                t("Vazifalar", "Задачи", "Tasks"),
-                t("Qarzlar", "Долги", "Debts"),
-                t("Tasbeh", "Тасбих", "Tasbih")
-        };
-        pageTabs = new TextView[names.length];
-        for (int i = 0; i < names.length; i++) {
-            final int index = i;
-            TextView tab = new TextView(context);
-            tab.setText(names[i]);
-            tab.setTextSize(13);
-            tab.setGravity(Gravity.CENTER);
-            tab.setPadding(0, dp(9), 0, dp(9));
-            tab.setOnClickListener(v -> selectPage(index));
-            pageTabs[i] = tab;
-            segment.addView(tab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        }
-        LinearLayout.LayoutParams segmentLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        segmentLp.setMargins(dp(16), dp(12), dp(16), dp(4));
-        host.addView(segment, segmentLp);
-
-        FrameLayout content = new FrameLayout(context);
+        cardColorValue = cardColor;
+        content = new FrameLayout(context);
         host.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         pages = new View[]{
                 buildCalendarPage(context, bg, cardColor),
                 new TaqvimVazifalar(this, context, textColor, accent, cardColor),
                 new TaqvimQarzlar(this, context, textColor, accent, cardColor),
-                new TaqvimTasbeh(this, context, textColor, accent, cardColor)
+                new TaqvimTasbeh(this, context, textColor, accent, cardColor),
+                new TaqvimHisoblagich(this, context, textColor, accent, cardColor),
+                new TaqvimHome(context, textColor, accent, cardColor, this::selectPage)
         };
         for (View page : pages) {
             content.addView(page, new FrameLayout.LayoutParams(
@@ -280,23 +274,38 @@ public class CalendarTabActivity extends BaseFragment {
         if (index == 0) {
             refreshMarks();
         }
-        if (pages != null) {
+        if (pages != null && content != null && pageContext != null) {
+            if (index == PAGE_HOME) {
+                ((TaqvimHome) pages[PAGE_HOME]).refresh();
+            } else if (index == PAGE_DEBTS) {
+                // the calculator may have added a debt: build the list again
+                content.removeView(pages[PAGE_DEBTS]);
+                pages[PAGE_DEBTS] = new TaqvimQarzlar(this, pageContext, textColor, accent, cardColorValue);
+                content.addView(pages[PAGE_DEBTS], new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
             for (int i = 0; i < pages.length; i++) {
                 pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
             }
         }
-        if (pageTabs == null) {
-            return;
+        if (headerTitle != null && headerBack != null) {
+            headerBack.setVisibility(index == PAGE_HOME ? View.GONE : View.VISIBLE);
+            final String[] names = {
+                    t("Kalendar", "Календарь", "Calendar"),
+                    t("Vazifalar", "Задачи", "Tasks"),
+                    t("Qarzlar", "Долги", "Debts"),
+                    t("Tasbeh", "Тасбих", "Tasbih"),
+                    t("Hisoblagich", "Калькулятор", "Calculator")
+            };
+            headerTitle.setText(index == PAGE_HOME ? getCalendarTitle() : names[index]);
         }
-        for (int i = 0; i < pageTabs.length; i++) {
-            final boolean on = i == index;
-            pageTabs[i].setTextColor(on ? accent : ColorUtils.setAlphaComponent(textColor, 170));
-            pageTabs[i].setTypeface(on ? AndroidUtilities.bold() : Typeface.DEFAULT);
-            if (on) {
-                pageTabs[i].setBackground(Theme.createRoundRectDrawable(dp(10), pageTabBg));
-            } else {
-                pageTabs[i].setBackground(null);
-            }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (currentPage == PAGE_HOME && pages != null && pages.length > PAGE_HOME && pages[PAGE_HOME] instanceof TaqvimHome) {
+            ((TaqvimHome) pages[PAGE_HOME]).refresh();
         }
     }
 
