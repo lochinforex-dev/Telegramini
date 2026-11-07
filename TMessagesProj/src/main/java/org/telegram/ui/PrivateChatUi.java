@@ -100,19 +100,16 @@ public class PrivateChatUi {
     }
 
     private static void confirmAdNotice(Context context, Runnable onOk) {
-        final PrivateChatController controller = PrivateChatController.getInstance();
-        if (controller.hasSeenAdNotice()) {
+        // a valid 3-day pass: no notice and no ad
+        if (!PrivateAdGate.needsAd()) {
             onOk.run();
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Eslatma");
-        builder.setMessage("Maxfiy chatlarni ochish uchun har 3 kunda bir marta 5 soniyalik reklama ko'rasiz. "
+        builder.setMessage("Maxfiy chatlardan foydalanish uchun har 3 kunda bir marta 5 soniyalik reklama ko'rasiz. "
                 + "Chatni istalgan vaqtda reklamasiz maxfiy ro'yxatdan chiqarishingiz mumkin.");
-        builder.setPositiveButton("Tushundim, davom etish", (d, w) -> {
-            controller.setAdNoticeSeen();
-            onOk.run();
-        });
+        builder.setPositiveButton("Davom etish", (d, w) -> PrivateAdGate.ensureAdPass(context, onOk));
         builder.setNegativeButton("Bekor qilish", null);
         builder.create().show();
     }
