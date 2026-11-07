@@ -2,7 +2,13 @@ package org.telegram.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
+import androidx.annotation.NonNull;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
+import java.util.concurrent.Executor;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.Window;
@@ -325,7 +331,48 @@ public class PrivateChatUi {
             });
         });
         builder.setNegativeButton("Bekor qilish", null);
+        if (canUseBiometric()) {
+            builder.setNeutralButton("Barmoq izi / yuz", (d, w) -> askBiometric(context, message, onSuccess));
+        }
         showWithKeyboard(builder.create(), field);
+    }
+
+    // ---------- fingerprint / face (the phone itself checks it; the app never sees any biometric data) ----------
+
+    private static boolean canUseBiometric() {
+        try {
+            return Build.VERSION.SDK_INT >= 23 && LaunchActivity.instance != null
+                    && BiometricManager.from(ApplicationLoader.applicationContext)
+                    .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    private static void askBiometric(Context context, String message, Runnable onSuccess) {
+        try {
+            final Executor executor = ContextCompat.getMainExecutor(context);
+            BiometricPrompt prompt = new BiometricPrompt(LaunchActivity.instance, executor, new BiometricPrompt.AuthenticationCallback() {
+                @Override
+                public void onAuthenticationError(int errMsgId, @NonNull CharSequence errString) {
+                    // cancelled or too many tries: back to the password
+                    askPassword(context, message, onSuccess, null);
+                }
+
+                @Override
+                public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                    onSuccess.run();
+                }
+            });
+            final BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Maxfiy chat")
+                    .setNegativeButtonText("Parol bilan")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                    .build();
+            prompt.authenticate(info);
+        } catch (Throwable e) {
+            askPassword(context, message, onSuccess, null);
+        }
     }
 
     private static void createPassword(Context context, Runnable onDone) {
