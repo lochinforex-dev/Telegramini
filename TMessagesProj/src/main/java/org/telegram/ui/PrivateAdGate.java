@@ -32,6 +32,11 @@ public class PrivateAdGate {
      */
     private static final boolean ALWAYS_SHOW = true;
 
+    /** True when an ad has to be shown now (no valid 3-day pass). */
+    public static boolean needsAd() {
+        return ALWAYS_SHOW || !PrivateChatController.getInstance().hasAdPass();
+    }
+
     /** Runs onDone at once when the 3-day pass is valid, otherwise shows the ad first. */
     public static void ensureAdPass(final Context context, final Runnable onDone) {
         final PrivateChatController controller = PrivateChatController.getInstance();
