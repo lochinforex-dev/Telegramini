@@ -33,7 +33,7 @@ import java.util.List;
 public class AdStripCell extends FrameLayout {
 
     private static final int HEIGHT_DP = 28;
-    private static final int IMAGE_HEIGHT_DP = 96;
+    private static final int IMAGE_HEIGHT_DP = 64;
     private static final long ROTATE_DELAY = 8000;
 
     /** Small in-memory picture cache: address -> bitmap. */
@@ -103,7 +103,41 @@ public class AdStripCell extends FrameLayout {
         labelParams.topMargin = AndroidUtilities.dp(6);
         addView(imageLabel, labelParams);
 
-        setOnClickListener(v -> openCurrent());
+    }
+
+    private float downX, downY;
+    private boolean tapCandidate;
+
+    /**
+     * The chat list marks this row as "not enabled", which switches off normal clicks,
+     * so the tap is detected here by hand.
+     */
+    @Override
+    public boolean onTouchEvent(android.view.MotionEvent event) {
+        switch (event.getActionMasked()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                downX = event.getX();
+                downY = event.getY();
+                tapCandidate = true;
+                return true;
+            case android.view.MotionEvent.ACTION_MOVE: {
+                int slop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
+                if (Math.abs(event.getX() - downX) > slop || Math.abs(event.getY() - downY) > slop) {
+                    tapCandidate = false;
+                }
+                return true;
+            }
+            case android.view.MotionEvent.ACTION_UP:
+                if (tapCandidate) {
+                    tapCandidate = false;
+                    openCurrent();
+                }
+                return true;
+            case android.view.MotionEvent.ACTION_CANCEL:
+                tapCandidate = false;
+                return true;
+        }
+        return super.onTouchEvent(event);
     }
 
     @Override
