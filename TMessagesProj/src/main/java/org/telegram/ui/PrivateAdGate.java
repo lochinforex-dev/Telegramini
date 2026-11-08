@@ -208,6 +208,7 @@ public class PrivateAdGate {
                 return false;
             });
             video.setOnErrorListener((mp, what, extra) -> {
+                notifyVideoProblem(context, "video ochilmadi (kod " + what + "/" + extra + "), format mos emas");
                 video.setVisibility(android.view.View.GONE);
                 startCountdown.run();
                 return true;
@@ -231,6 +232,7 @@ public class PrivateAdGate {
                     if (ok) {
                         play.run();
                     } else {
+                        notifyVideoProblem(context, AdVideoCache.lastError);
                         video.setVisibility(android.view.View.GONE);
                         startCountdown.run();
                     }
@@ -239,6 +241,7 @@ public class PrivateAdGate {
             // safety: if the video cannot be shown within 12 seconds, the text ad is used and the count starts
             AndroidUtilities.runOnUIThread(() -> {
                 if (!started[0]) {
+                    notifyVideoProblem(context, "12 soniyada birinchi kadr chiqmadi");
                     video.setVisibility(android.view.View.GONE);
                     startCountdown.run();
                 }
@@ -249,6 +252,13 @@ public class PrivateAdGate {
                 } catch (Throwable ignore) {
                 }
             });
+        }
+    }
+
+    private static void notifyVideoProblem(Context context, String reason) {
+        try {
+            android.widget.Toast.makeText(context, "Video: " + reason, android.widget.Toast.LENGTH_LONG).show();
+        } catch (Throwable ignore) {
         }
     }
 }

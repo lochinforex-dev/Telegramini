@@ -225,25 +225,6 @@ public class CalendarTabActivity extends BaseFragment {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(16), dp(16), dp(16), dp(6));
 
-        // "Bosh menyu" button: a visible pill that leads back to the Kundalik home page
-        headerBack = new TextView(context);
-        headerBack.setText("\u2039  " + t("Bosh menyu", "Главное меню", "Home"));
-        headerBack.setTextSize(13);
-        headerBack.setTypeface(AndroidUtilities.bold());
-        headerBack.setSingleLine(true);
-        headerBack.setTextColor(accent);
-        headerBack.setPadding(dp(12), dp(8), dp(14), dp(8));
-        android.graphics.drawable.GradientDrawable backBg = new android.graphics.drawable.GradientDrawable();
-        backBg.setColor(ColorUtils.blendARGB(bg, accent, 0.14f));
-        backBg.setCornerRadius(dp(16));
-        headerBack.setBackground(backBg);
-        headerBack.setOnClickListener(v -> selectPage(PAGE_HOME));
-        headerBack.setVisibility(View.GONE);
-        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        backLp.rightMargin = dp(12);
-        header.addView(headerBack, backLp);
-
         headerTitle = new TextView(context);
         headerTitle.setText(getCalendarTitle());
         headerTitle.setTextSize(28);
@@ -251,6 +232,27 @@ public class CalendarTabActivity extends BaseFragment {
         headerTitle.setTextColor(textColor);
         header.addView(headerTitle, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        // "Bosh menyu" button (top right): leads back to the Kundalik home page
+        headerBack = new TextView(context);
+        headerBack.setText("\u2302  " + t("Bosh menyu", "Главное меню", "Home"));
+        headerBack.setTextSize(14);
+        headerBack.setTypeface(AndroidUtilities.bold());
+        headerBack.setSingleLine(true);
+        headerBack.setTextColor(0xFFFFFFFF);
+        headerBack.setGravity(Gravity.CENTER);
+        headerBack.setPadding(dp(16), dp(10), dp(16), dp(10));
+        android.graphics.drawable.GradientDrawable backBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+        backBg.setCornerRadius(dp(20));
+        headerBack.setBackground(backBg);
+        headerBack.setOnClickListener(v -> selectPage(PAGE_HOME));
+        headerBack.setVisibility(View.GONE);
+        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        backLp.leftMargin = dp(12);
+        header.addView(headerBack, backLp);
         host.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
