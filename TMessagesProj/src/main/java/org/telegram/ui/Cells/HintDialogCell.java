@@ -219,6 +219,12 @@ public class HintDialogCell extends FrameLayout {
             currentUser = null;
             imageView.setForUserOrChat(chat, avatarDrawable);
         }
+        if (org.telegram.messenger.PrivateChatController.getInstance().isLocked(uid)) {
+            // "Maxfiy chat": no real name or photo in the recent people row
+            nameTextView.setText("\uD83D\uDD12");
+            avatarDrawable.setInfo(uid, "?", null);
+            imageView.setImage((org.telegram.messenger.ImageLocation) null, "50_50", avatarDrawable, null);
+        }
         updatePremiumBlocked(false);
         if (counter) {
             update(0);

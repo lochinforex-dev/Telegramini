@@ -33,7 +33,7 @@ import java.util.List;
 public class AdStripCell extends FrameLayout {
 
     private static final int HEIGHT_DP = 28;
-    private static final int IMAGE_HEIGHT_DP = 64;
+    private static final int IMAGE_HEIGHT_DP = 48;
     private static final long ROTATE_DELAY = 8000;
 
     /** Small in-memory picture cache: address -> bitmap. */

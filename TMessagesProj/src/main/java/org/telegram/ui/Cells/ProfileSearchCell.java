@@ -528,6 +528,10 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
             nameString = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(user)));
         }
         nameString = AndroidUtilities.replaceNewLines(nameString);
+        if (dialog_id != 0 && org.telegram.messenger.PrivateChatController.getInstance().isLocked(dialog_id)) {
+            // "Maxfiy chat": do not show the real name in the search results
+            nameString = "\uD83D\uDD12 Maxfiy chat";
+        }
         if (TextUtils.isEmpty(nameString)) {
             if (user != null && !TextUtils.isEmpty(user.phone)) {
                 nameString = PhoneFormat.getInstance().format("+" + user.phone);
@@ -715,6 +719,9 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
             currentStatusPaint = statusPaint;
         }
 
+        if (dialog_id != 0 && org.telegram.messenger.PrivateChatController.getInstance().isLocked(dialog_id)) {
+            statusString = null;
+        }
         if (!TextUtils.isEmpty(statusString)) {
             CharSequence statusStringFinal = TextUtils.ellipsize(statusString, currentStatusPaint, statusWidth - dp(12), TextUtils.TruncateAt.END);
             statusLayout = new StaticLayout(statusStringFinal, currentStatusPaint, statusWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
@@ -864,6 +871,10 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
             avatarImage.setImage(null, null, avatarDrawable, null, null, 0);
         }
 
+        if (dialog_id != 0 && org.telegram.messenger.PrivateChatController.getInstance().isLocked(dialog_id)) {
+            avatarDrawable.setInfo(dialog_id, "?", null);
+            avatarImage.setImage(null, "50_50", avatarDrawable, null, 0);
+        }
         avatarImage.setRoundRadius(ChatObject.isCommunity(chat) ? DrawableUtils.getCommunityCardDrawableRadius(dp(46)) : chat != null && chat.monoforum ? 0 : rectangularAvatar ? dp(10) : chat != null && chat.forum ? dp(16) : dp(23));
         if (mask != 0) {
             boolean continueUpdate = false;
