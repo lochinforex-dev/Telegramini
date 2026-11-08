@@ -236,6 +236,13 @@ public class AdBannerController {
                 }
                 ads = resultAds;
                 videoAds = resultVideo;
+                // download the videos to the phone in advance, so they open at once
+                java.util.ArrayList<String> videoUrls = new java.util.ArrayList<>();
+                for (Ad v : resultVideo) {
+                    videoUrls.add(v.videoUrl);
+                    AdVideoCache.fetch(v.videoUrl, null);
+                }
+                AdVideoCache.cleanup(videoUrls);
                 promoUrl = resultPromo;
                 if (changed) {
                     for (Runnable r : new ArrayList<>(listeners)) {
