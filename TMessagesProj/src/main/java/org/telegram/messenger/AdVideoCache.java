@@ -19,7 +19,9 @@ public class AdVideoCache {
         void done(boolean ok);
     }
 
-    private static final long MAX_BYTES = 12L * 1024 * 1024;
+    private static final long MAX_BYTES = 25L * 1024 * 1024;
+    /** Reason of the last failure (shown to the tester). */
+    public static volatile String lastError = "";
     private static final HashMap<String, ArrayList<Callback>> waiting = new HashMap<>();
 
     private static File dir() {
@@ -90,7 +92,11 @@ public class AdVideoCache {
                 connection = (HttpURLConnection) new URL(url).openConnection();
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(15000);
-                if (connection.getResponseCode() == 200) {
+                final int code = connection.getResponseCode();
+                if (code != 200) {
+                    lastError = "HTTP " + code;
+                }
+                if (code == 200) {
                     InputStream in = connection.getInputStream();
                     FileOutputStream out = new FileOutputStream(tmp);
                     byte[] buffer = new byte[16384];
@@ -106,11 +112,14 @@ public class AdVideoCache {
                         out.write(buffer, 0, read);
                     }
                     out.close();
-                    if (!tooBig && total > 0) {
+                    if (tooBig) {
+                        lastError = "fayl 25 MB dan katta";
+                    } else if (total > 0) {
                         ok = tmp.renameTo(target);
                     }
                 }
             } catch (Throwable e) {
+                lastError = "yuklab olinmadi: " + e.getClass().getSimpleName();
                 FileLog.e(e);
             } finally {
                 if (connection != null) {
