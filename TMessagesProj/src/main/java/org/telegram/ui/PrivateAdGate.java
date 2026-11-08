@@ -169,6 +169,7 @@ public class PrivateAdGate {
                 return;
             }
             started[0] = true;
+            button.setText("Davom etish (" + left[0] + ")");
             AndroidUtilities.runOnUIThread(tick[0], 1000);
         };
         tick[0] = () -> {
@@ -189,13 +190,21 @@ public class PrivateAdGate {
             startCountdown.run();
         } else {
             // the 5 seconds begin when the video really starts; if it cannot play, the text is shown instead
+            button.setText("Video yuklanmoqda...");
             video.setOnPreparedListener(mp -> {
                 try {
                     mp.setLooping(true);
                 } catch (Throwable ignore) {
                 }
                 video.start();
-                startCountdown.run();
+            });
+            // the count starts when the first picture is really shown
+            video.setOnInfoListener((mp, what, extra) -> {
+                if (what == android.media.MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                    startCountdown.run();
+                    return true;
+                }
+                return false;
             });
             video.setOnErrorListener((mp, what, extra) -> {
                 video.setVisibility(android.view.View.GONE);
@@ -208,8 +217,8 @@ public class PrivateAdGate {
                 video.setVisibility(android.view.View.GONE);
                 startCountdown.run();
             }
-            // safety: never wait longer than 8 seconds for the video to start
-            AndroidUtilities.runOnUIThread(startCountdown::run, 8000);
+            // safety: never wait longer than 20 seconds for the video to start
+            AndroidUtilities.runOnUIThread(startCountdown::run, 20000);
             dialog.setOnDismissListener(d -> {
                 try {
                     video.stopPlayback();

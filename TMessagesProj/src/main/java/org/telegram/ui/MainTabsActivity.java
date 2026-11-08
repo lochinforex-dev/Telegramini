@@ -790,6 +790,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
     @Override
     public boolean onBackPressed(boolean invoked) {
+        if (viewPager != null && viewPager.getCurrentPosition() == POSITION_CALENDAR && CalendarTabActivity.handleBack(invoked)) {
+            return false;
+        }
         final boolean result = super.onBackPressed(invoked);
         if (result) {
             final int startPosition = getStartPosition();

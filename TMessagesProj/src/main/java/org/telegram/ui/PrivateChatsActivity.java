@@ -87,10 +87,13 @@ public class PrivateChatsActivity extends UniversalFragment {
             } else {
                 args.putLong("chat_id", -dialogId);
             }
-            // The password was already entered to get here, so the chat opens straight away.
-            PrivateChatController.getInstance().markUnlocked(dialogId);
-            openedChat = true;
-            presentFragment(new ChatActivity(args));
+            // The password was already entered to get here. Once per 3 days an ad is shown first.
+            final long openId = dialogId;
+            PrivateAdGate.ensureAdPass(getParentActivity(), () -> {
+                PrivateChatController.getInstance().markUnlocked(openId);
+                openedChat = true;
+                presentFragment(new ChatActivity(args));
+            });
         }
     }
 

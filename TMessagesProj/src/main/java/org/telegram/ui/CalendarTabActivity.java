@@ -65,6 +65,19 @@ public class CalendarTabActivity extends BaseFragment {
     private TextView headerTitle;
     private TextView headerBack;
     private int cardColorValue;
+    private static java.lang.ref.WeakReference<CalendarTabActivity> activeInstance;
+
+    /** System "back" inside an inner page returns to the Kundalik home first. Returns true when it was used. */
+    public static boolean handleBack(boolean invoked) {
+        CalendarTabActivity tab = activeInstance != null ? activeInstance.get() : null;
+        if (tab == null || tab.currentPage == PAGE_HOME) {
+            return false;
+        }
+        if (invoked) {
+            tab.selectPage(PAGE_HOME);
+        }
+        return true;
+    }
     private Context pageContext;
     private HashSet<Integer> taskDays = new HashSet<>();
     private HashSet<Integer> debtDays = new HashSet<>();
@@ -250,6 +263,7 @@ public class CalendarTabActivity extends BaseFragment {
         }
 
         pageContext = context;
+        activeInstance = new java.lang.ref.WeakReference<>(this);
         selectPage(currentPage);
 
         fragmentView = host;
