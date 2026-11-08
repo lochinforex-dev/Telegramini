@@ -225,15 +225,24 @@ public class CalendarTabActivity extends BaseFragment {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(16), dp(16), dp(16), dp(6));
 
+        // "Bosh menyu" button: a visible pill that leads back to the Kundalik home page
         headerBack = new TextView(context);
-        headerBack.setText("\u2190");
-        headerBack.setTextSize(26);
-        headerBack.setTextColor(textColor);
-        headerBack.setPadding(0, 0, dp(12), 0);
+        headerBack.setText("\u2039  " + t("Bosh menyu", "Главное меню", "Home"));
+        headerBack.setTextSize(13);
+        headerBack.setTypeface(AndroidUtilities.bold());
+        headerBack.setSingleLine(true);
+        headerBack.setTextColor(accent);
+        headerBack.setPadding(dp(12), dp(8), dp(14), dp(8));
+        android.graphics.drawable.GradientDrawable backBg = new android.graphics.drawable.GradientDrawable();
+        backBg.setColor(ColorUtils.blendARGB(bg, accent, 0.14f));
+        backBg.setCornerRadius(dp(16));
+        headerBack.setBackground(backBg);
         headerBack.setOnClickListener(v -> selectPage(PAGE_HOME));
         headerBack.setVisibility(View.GONE);
-        header.addView(headerBack, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        backLp.rightMargin = dp(12);
+        header.addView(headerBack, backLp);
 
         headerTitle = new TextView(context);
         headerTitle.setText(getCalendarTitle());
@@ -312,6 +321,7 @@ public class CalendarTabActivity extends BaseFragment {
                     t("Hisoblagich", "Калькулятор", "Calculator")
             };
             headerTitle.setText(index == PAGE_HOME ? getCalendarTitle() : names[index]);
+            headerTitle.setTextSize(index == PAGE_HOME ? 28 : 22);
         }
     }
 
@@ -337,16 +347,35 @@ public class CalendarTabActivity extends BaseFragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // Selected date line
+        LinearLayout hero = new LinearLayout(context);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        android.graphics.drawable.GradientDrawable heroBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+        heroBg.setCornerRadius(dp(24));
+        hero.setBackground(heroBg);
+        hero.setPadding(dp(20), dp(16), dp(20), dp(16));
+        TextView heroLabel = new TextView(context);
+        heroLabel.setText(t("TANLANGAN KUN", "ВЫБРАННЫЙ ДЕНЬ", "SELECTED DAY"));
+        heroLabel.setTextSize(11);
+        heroLabel.setTypeface(AndroidUtilities.bold());
+        heroLabel.setTextColor(0xB3FFFFFF);
+        hero.addView(heroLabel);
         selectedDateText = new TextView(context);
-        selectedDateText.setTextSize(15);
-        selectedDateText.setTextColor(ColorUtils.setAlphaComponent(textColor, 160));
-        selectedDateText.setPadding(0, dp(4), 0, dp(12));
-        root.addView(selectedDateText, new LinearLayout.LayoutParams(
+        selectedDateText.setTextSize(20);
+        selectedDateText.setTypeface(AndroidUtilities.bold());
+        selectedDateText.setTextColor(0xFFFFFFFF);
+        selectedDateText.setPadding(0, dp(4), 0, 0);
+        hero.addView(selectedDateText, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        heroLp.bottomMargin = dp(12);
+        root.addView(hero, heroLp);
 
         // Card with month grid
         FrameLayout card = new FrameLayout(context);
-        card.setBackground(Theme.createRoundRectDrawable(dp(20), cardColor));
+        card.setBackground(Theme.createRoundRectDrawable(dp(24), cardColor));
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
 
         monthView = new MonthView(context, textColor, accent, new MonthView.DayInfo() {
@@ -379,7 +408,7 @@ public class CalendarTabActivity extends BaseFragment {
         // Info panel (holiday + note for the selected day)
         infoPanel = new LinearLayout(context);
         infoPanel.setOrientation(LinearLayout.VERTICAL);
-        infoPanel.setBackground(Theme.createRoundRectDrawable(dp(20), cardColor));
+        infoPanel.setBackground(Theme.createRoundRectDrawable(dp(24), cardColor));
         infoPanel.setPadding(dp(16), dp(14), dp(16), dp(14));
         LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -393,7 +422,11 @@ public class CalendarTabActivity extends BaseFragment {
         todayButton.setTypeface(AndroidUtilities.bold());
         todayButton.setTextColor(0xFFFFFFFF);
         todayButton.setGravity(Gravity.CENTER);
-        todayButton.setBackground(Theme.createRoundRectDrawable(dp(22), accent));
+        android.graphics.drawable.GradientDrawable todayBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+        todayBg.setCornerRadius(dp(22));
+        todayButton.setBackground(todayBg);
         todayButton.setPadding(dp(24), 0, dp(24), 0);
         todayButton.setOnClickListener(v -> monthView.goToToday());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -426,7 +459,12 @@ public class CalendarTabActivity extends BaseFragment {
         SpannableStringBuilder sb = new SpannableStringBuilder("\u25CF  " + text);
         sb.setSpan(new ForegroundColorSpan(dotColor), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         tv.setText(sb);
-        tv.setPadding(0, 0, 0, dp(8));
+        tv.setPadding(dp(12), dp(10), dp(12), dp(10));
+        tv.setBackground(Theme.createRoundRectDrawable(dp(14), ColorUtils.setAlphaComponent(dotColor, 34)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(8);
+        tv.setLayoutParams(lp);
         return tv;
     }
 
@@ -557,6 +595,8 @@ public class CalendarTabActivity extends BaseFragment {
         private final Paint whiteDot = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint markPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
+        private final Paint selFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint btnFill = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         private final int textColor;
         private final int accent;
@@ -713,7 +753,10 @@ public class CalendarTabActivity extends BaseFragment {
 
             // Arrows
             final float cy = dp(HEADER_DP) / 2f;
-            final float ax = dp(24);
+            final float ax = dp(28);
+            btnFill.setColor(ColorUtils.setAlphaComponent(textColor, 18));
+            canvas.drawCircle(ax, cy, dp(18), btnFill);
+            canvas.drawCircle(w - ax, cy, dp(18), btnFill);
             final float s = dp(6);
             path.reset();
             path.moveTo(ax + s / 2f, cy - s);
@@ -737,6 +780,8 @@ public class CalendarTabActivity extends BaseFragment {
             for (int i = 0; i < 7; i++) {
                 String name = names[order[i]];
                 if (name.length() > 3) name = name.substring(0, 3);
+                weekPaint.setColor(i >= 5 ? ColorUtils.setAlphaComponent(HOLIDAY_COLOR, 200)
+                        : ColorUtils.setAlphaComponent(textColor, 140));
                 canvas.drawText(capitalize(name), cellW * i + cellW / 2f, weekY, weekPaint);
             }
 
@@ -768,6 +813,8 @@ public class CalendarTabActivity extends BaseFragment {
                     p = boldPaint;
                 } else {
                     if (isSelected) {
+                        selFill.setColor(ColorUtils.setAlphaComponent(accent, 46));
+                        canvas.drawCircle(cx, cyDay, radius, selFill);
                         canvas.drawCircle(cx, cyDay, radius - dp(1), accentStroke);
                     }
                     if (holiday) {

@@ -304,22 +304,26 @@ public class TaqvimQarzlar extends FrameLayout {
         final Context ctx = getContext();
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
-        card.setBackground(Theme.createRoundRectDrawable(dp(20), ColorUtils.setAlphaComponent(color, 30)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(16));
+        final boolean green = color == GREEN;
+        GradientDrawable cardBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                green ? new int[]{0xFF46DBA0, 0xFF17A974} : new int[]{0xFFFF8A80, 0xFFE53935});
+        cardBg.setCornerRadius(dp(22));
+        card.setBackground(cardBg);
 
         TextView title = new TextView(ctx);
         title.setText(label);
         title.setTextSize(13);
-        title.setTextColor(ColorUtils.setAlphaComponent(textColor, 160));
+        title.setTextColor(0xE6FFFFFF);
         card.addView(title, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView amount = new TextView(ctx);
         amount.setText(value);
-        amount.setTextSize(18);
+        amount.setTextSize(20);
         amount.setTypeface(AndroidUtilities.bold());
-        amount.setTextColor(color);
-        amount.setPadding(0, dp(4), 0, 0);
+        amount.setTextColor(Color.WHITE);
+        amount.setPadding(0, dp(6), 0, 0);
         card.addView(amount, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return card;

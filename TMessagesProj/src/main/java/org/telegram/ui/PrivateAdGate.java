@@ -9,6 +9,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AdBannerController;
+import org.telegram.messenger.AdVideoCache;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.PrivateChatController;
 import org.telegram.ui.ActionBar.AlertDialog;
@@ -211,14 +212,37 @@ public class PrivateAdGate {
                 startCountdown.run();
                 return true;
             });
-            try {
-                video.setVideoURI(Uri.parse(ad.videoUrl));
-            } catch (Throwable e) {
-                video.setVisibility(android.view.View.GONE);
-                startCountdown.run();
+            final String videoAddress = ad.videoUrl;
+            final Runnable play = () -> {
+                if (!dialog.isShowing()) {
+                    return;
+                }
+                try {
+                    video.setVideoPath(AdVideoCache.fileFor(videoAddress).getAbsolutePath());
+                } catch (Throwable e) {
+                    video.setVisibility(android.view.View.GONE);
+                    startCountdown.run();
+                }
+            };
+            if (AdVideoCache.isReady(videoAddress)) {
+                play.run();
+            } else {
+                AdVideoCache.fetch(videoAddress, ok -> {
+                    if (ok) {
+                        play.run();
+                    } else {
+                        video.setVisibility(android.view.View.GONE);
+                        startCountdown.run();
+                    }
+                });
             }
-            // safety: never wait longer than 20 seconds for the video to start
-            AndroidUtilities.runOnUIThread(startCountdown::run, 20000);
+            // safety: if the video cannot be shown within 12 seconds, the text ad is used and the count starts
+            AndroidUtilities.runOnUIThread(() -> {
+                if (!started[0]) {
+                    video.setVisibility(android.view.View.GONE);
+                    startCountdown.run();
+                }
+            }, 12000);
             dialog.setOnDismissListener(d -> {
                 try {
                     video.stopPlayback();

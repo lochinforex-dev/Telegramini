@@ -301,15 +301,7 @@ public class TaqvimVazifalar extends FrameLayout {
         final Context ctx = getContext();
         final int today = todayKey();
 
-        TextView head = new TextView(ctx);
-        head.setText(t("Kunlik vazifalar", "Ежедневные задачи", "Daily tasks"));
-        head.setTextSize(22);
-        head.setTypeface(AndroidUtilities.bold());
-        head.setTextColor(textColor);
-        head.setPadding(dp(4), dp(4), 0, 0);
-        list.addView(head, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
+        buildHero(today);
         buildAddCard();
         buildTodayCard(today);
         buildWeekCard(today);
@@ -318,41 +310,138 @@ public class TaqvimVazifalar extends FrameLayout {
 
     /* -- add a task -- */
 
+    private void buildHero(int today) {
+        final Context ctx = getContext();
+        int total = 0;
+        int done = 0;
+        for (Task task : data.tasks) {
+            total++;
+            if (markOf(data, today, task.id) == MARK_DONE) {
+                done++;
+            }
+        }
+        LinearLayout hero = new LinearLayout(ctx);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setPadding(dp(20), dp(16), dp(20), dp(18));
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF46DBA0, 0xFF17A974, 0xFF0F8F8A});
+        bg.setCornerRadius(dp(26));
+        hero.setBackground(bg);
+
+        TextView label = new TextView(ctx);
+        label.setText(t("Bugungi natija", "Итог дня", "Today"));
+        label.setTextSize(14);
+        label.setTextColor(0xE6FFFFFF);
+        hero.addView(label);
+
+        TextView big = new TextView(ctx);
+        big.setText(total == 0 ? t("Vazifa yo'q", "Нет задач", "No tasks") : (done + " / " + total));
+        big.setTextSize(36);
+        big.setTypeface(AndroidUtilities.bold());
+        big.setTextColor(Color.WHITE);
+        hero.addView(big);
+
+        HeroBar bar = new HeroBar(ctx, total == 0 ? 0f : done / (float) total);
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(8));
+        barLp.topMargin = dp(8);
+        hero.addView(bar, barLp);
+
+        TextView msg = new TextView(ctx);
+        if (total == 0) {
+            msg.setText(t("Birinchi vazifangizni pastda qo'shing", "Добавьте первую задачу ниже", "Add your first task below"));
+        } else if (done >= total) {
+            msg.setText(t("Ajoyib! Bugun hammasi bajarildi", "Отлично! Всё выполнено", "Great! Everything is done"));
+        } else {
+            msg.setText(t("Yana " + (total - done) + " ta vazifa qoldi", "Осталось задач: " + (total - done),
+                    (total - done) + " tasks left"));
+        }
+        msg.setTextSize(13);
+        msg.setTextColor(0xE6FFFFFF);
+        msg.setPadding(0, dp(8), 0, 0);
+        hero.addView(msg);
+
+        list.addView(hero, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    private static class HeroBar extends View {
+        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.RectF rect = new android.graphics.RectF();
+        private final float value;
+
+        HeroBar(Context context, float value) {
+            super(context);
+            this.value = Math.max(0f, Math.min(1f, value));
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            float h = getHeight();
+            rect.set(0, 0, getWidth(), h);
+            paint.setColor(0x4DFFFFFF);
+            canvas.drawRoundRect(rect, h / 2, h / 2, paint);
+            if (value > 0) {
+                rect.set(0, 0, Math.max(h, getWidth() * value), h);
+                paint.setColor(Color.WHITE);
+                canvas.drawRoundRect(rect, h / 2, h / 2, paint);
+            }
+        }
+    }
+
+    /** A small grey section title above a group of cards. */
+    private void sectionTitle(String text) {
+        TextView tv = new TextView(getContext());
+        tv.setText(text);
+        tv.setTextSize(13);
+        tv.setTypeface(AndroidUtilities.bold());
+        tv.setAllCaps(true);
+        tv.setLetterSpacing(0.04f);
+        tv.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
+        tv.setPadding(dp(6), dp(18), 0, dp(2));
+        list.addView(tv, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
     private void buildAddCard() {
         final Context ctx = getContext();
-        LinearLayout card = card(t("Yangi vazifa qo'shish", "Новая задача", "Add a new task"));
+        LinearLayout row = new LinearLayout(ctx);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(6), dp(6), dp(6));
+        row.setBackground(Theme.createRoundRectDrawable(dp(26), cardColor));
 
         final EditText input = new EditText(ctx);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        input.setHint(t("masalan: Sport bilan shug'ullanish", "например: Заняться спортом", "for example: Do sports"));
+        input.setHint(t("Yangi vazifa...", "Новая задача...", "New task..."));
         input.setTextSize(16);
         input.setTextColor(textColor);
         input.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 110));
-        input.setPadding(dp(14), dp(12), dp(14), dp(12));
-        input.setBackground(Theme.createRoundRectDrawable(dp(14), ColorUtils.setAlphaComponent(textColor, 18)));
+        input.setBackground(null);
+        input.setPadding(0, dp(10), 0, dp(10));
         input.setOnEditorActionListener((view, actionId, event) -> {
             addTask(input);
             return true;
         });
-        LinearLayout.LayoutParams inputLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        inputLp.topMargin = dp(12);
-        card.addView(input, inputLp);
+        row.addView(input, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView button = new TextView(ctx);
-        button.setText(t("Vazifa qo'shish", "Добавить задачу", "Add task"));
-        button.setTextSize(16);
-        button.setTypeface(AndroidUtilities.bold());
-        button.setTextColor(Color.WHITE);
-        button.setGravity(Gravity.CENTER);
-        button.setBackground(Theme.createRoundRectDrawable(dp(16), accent));
-        button.setOnClickListener(v -> addTask(input));
-        LinearLayout.LayoutParams buttonLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
-        buttonLp.topMargin = dp(10);
-        card.addView(button, buttonLp);
+        TextView plus = new TextView(ctx);
+        plus.setText("+");
+        plus.setTextSize(28);
+        plus.setTextColor(Color.WHITE);
+        plus.setGravity(Gravity.CENTER);
+        GradientDrawable plusBg = new GradientDrawable();
+        plusBg.setShape(GradientDrawable.OVAL);
+        plusBg.setColor(accent);
+        plus.setBackground(plusBg);
+        plus.setOnClickListener(v -> addTask(input));
+        row.addView(plus, new LinearLayout.LayoutParams(dp(46), dp(46)));
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(14);
+        list.addView(row, lp);
     }
 
     private void addTask(EditText input) {
@@ -389,18 +478,26 @@ public class TaqvimVazifalar extends FrameLayout {
 
     private void buildTodayCard(final int today) {
         final Context ctx = getContext();
-        LinearLayout card = card(t("Bugungi vazifalar", "Задачи на сегодня", "Today's tasks"));
+        sectionTitle(t("Bugungi vazifalar", "Задачи на сегодня", "Today's tasks"));
 
         if (data.tasks.isEmpty()) {
-            TextView empty = new TextView(ctx);
-            empty.setText(t("Hali vazifa yo'q. Yuqoridagi maydonga yozib qo'shing.",
-                    "Задач пока нет. Добавьте её в поле выше.",
-                    "No tasks yet. Add one in the field above."));
-            empty.setTextSize(15);
-            empty.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
-            empty.setPadding(0, dp(10), 0, dp(4));
-            card.addView(empty, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            LinearLayout empty = new LinearLayout(ctx);
+            empty.setOrientation(LinearLayout.VERTICAL);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(dp(20), dp(28), dp(20), dp(28));
+            empty.setBackground(Theme.createRoundRectDrawable(dp(22), cardColor));
+            TextView text = new TextView(ctx);
+            text.setText(t("Hali vazifa yo'q.\nYuqoridagi maydonga yozib, + ni bosing.",
+                    "Задач пока нет.\nНапишите выше и нажмите +.",
+                    "No tasks yet.\nType above and tap +."));
+            text.setGravity(Gravity.CENTER);
+            text.setTextSize(15);
+            text.setTextColor(ColorUtils.setAlphaComponent(textColor, 140));
+            empty.addView(text);
+            LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            elp.topMargin = dp(8);
+            list.addView(empty, elp);
             return;
         }
 
@@ -408,19 +505,26 @@ public class TaqvimVazifalar extends FrameLayout {
         hint.setText(t("Har kuni belgilang: ✓ bajardim, ✕ bajarmadim.",
                 "Отмечайте каждый день: ✓ сделал, ✕ не сделал.",
                 "Mark every day: ✓ done, ✕ not done."));
-        hint.setTextSize(13);
-        hint.setTextColor(ColorUtils.setAlphaComponent(textColor, 130));
-        hint.setPadding(0, dp(4), 0, dp(4));
-        card.addView(hint, new LinearLayout.LayoutParams(
+        hint.setTextSize(12.5f);
+        hint.setTextColor(ColorUtils.setAlphaComponent(textColor, 120));
+        hint.setPadding(dp(6), dp(2), 0, dp(4));
+        list.addView(hint, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         for (int i = 0; i < data.tasks.size(); i++) {
             final Task task = data.tasks.get(i);
-            View divider = new View(ctx);
-            divider.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 22));
-            card.addView(divider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
-            card.addView(buildTaskRow(task, today), new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            View row = buildTaskRow(task, today);
+            row.setPadding(dp(16), dp(12), dp(12), dp(12));
+            final int mark = markOf(data, today, task.id);
+            GradientDrawable rowBg = new GradientDrawable();
+            rowBg.setCornerRadius(dp(20));
+            rowBg.setColor(mark == MARK_DONE ? ColorUtils.blendARGB(cardColor, GREEN, 0.10f)
+                    : mark == MARK_NOT_DONE ? ColorUtils.blendARGB(cardColor, RED, 0.08f) : cardColor);
+            row.setBackground(rowBg);
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rlp.topMargin = dp(8);
+            list.addView(row, rlp);
         }
     }
 
@@ -492,7 +596,7 @@ public class TaqvimVazifalar extends FrameLayout {
         tv.setTextSize(18);
         tv.setGravity(Gravity.CENTER);
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(12));
+        bg.setShape(GradientDrawable.OVAL);
         if (on) {
             bg.setColor(color);
             tv.setTextColor(Color.WHITE);
