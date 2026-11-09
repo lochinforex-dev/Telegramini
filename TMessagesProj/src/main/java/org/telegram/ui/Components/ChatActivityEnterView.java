@@ -2820,6 +2820,21 @@ public class ChatActivityEnterView extends FrameLayout implements
             attachLayout.addView(fmQuickButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
             fmQuickButtonShown = true;
 
+            // FastMessenger: "⋯" button next to the send button (opens Telegram's own schedule / effect / silent menu)
+            fmMoreButton = new android.widget.TextView(context);
+            fmMoreButton.setText("\u22EF");
+            fmMoreButton.setTextSize(22);
+            fmMoreButton.setGravity(Gravity.CENTER);
+            fmMoreButton.setTextColor(getThemedColor(Theme.key_glass_defaultIcon));
+            fmMoreButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)));
+            fmMoreButton.setVisibility(GONE);
+            fmMoreButton.setOnClickListener(fmView -> {
+                if (sendButton != null) {
+                    onSendLongClick(sendButton);
+                }
+            });
+            messageEditTextContainer.addView(fmMoreButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
+
             if (chatMode != ChatActivity.MODE_WELCOME_MESSAGES) {
                 notifyButton = new ImageView(context);
                 notifySilentDrawable = new CrossOutDrawable(context, R.drawable.input_notify_on, Theme.key_glass_defaultIcon);
@@ -4805,6 +4820,15 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     private ActionBarMenuSubItem actionScheduleButton;
+    private android.widget.TextView fmMoreButton;
+
+    private void fmUpdateMoreButton(Editable editable) {
+        if (fmMoreButton == null) {
+            return;
+        }
+        boolean show = editable != null && editable.length() > 0 && !isInScheduleMode() && editingMessageObject == null;
+        fmMoreButton.setVisibility(show ? VISIBLE : GONE);
+    }
     private boolean onSendLongClick(View view) {
         if (isInScheduleMode() || parentFragment != null && parentFragment.getChatMode() == ChatActivity.MODE_QUICK_REPLIES || animatorEphemeralMessageVisibility.getValue()) {
             return false;
@@ -6005,6 +6029,7 @@ public class ChatActivityEnterView extends FrameLayout implements
 
             @Override
             public void afterTextChanged(Editable editable) {
+                fmUpdateMoreButton(editable);
                 if (ignorePrevTextChange) {
                     return;
                 }
