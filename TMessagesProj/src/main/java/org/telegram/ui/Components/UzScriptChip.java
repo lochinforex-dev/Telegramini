@@ -212,7 +212,7 @@ public class UzScriptChip {
         int[] loc = new int[2];
         edit.getLocationOnScreen(loc);
         int rootWidth = edit.getRootView().getWidth();
-        int x = rootWidth - chip.getMeasuredWidth() - dp(16);
+        int x = dp(16); // left side
         int y = loc[1] - chip.getMeasuredHeight() - dp(14);
         return new int[]{x, y};
     }

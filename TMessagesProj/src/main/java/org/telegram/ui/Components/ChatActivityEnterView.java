@@ -2820,20 +2820,6 @@ public class ChatActivityEnterView extends FrameLayout implements
             attachLayout.addView(fmQuickButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
             fmQuickButtonShown = true;
 
-            // FastMessenger: "⋯" button next to the send button (opens Telegram's own schedule / effect / silent menu)
-            fmMoreButton = new android.widget.TextView(context);
-            fmMoreButton.setText("\u22EF");
-            fmMoreButton.setTextSize(22);
-            fmMoreButton.setGravity(Gravity.CENTER);
-            fmMoreButton.setTextColor(getThemedColor(Theme.key_glass_defaultIcon));
-            fmMoreButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)));
-            fmMoreButton.setVisibility(GONE);
-            fmMoreButton.setOnClickListener(fmView -> {
-                if (sendButton != null) {
-                    onSendLongClick(sendButton);
-                }
-            });
-            messageEditTextContainer.addView(fmMoreButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
 
             if (chatMode != ChatActivity.MODE_WELCOME_MESSAGES) {
                 notifyButton = new ImageView(context);
@@ -4820,15 +4806,167 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     private ActionBarMenuSubItem actionScheduleButton;
-    private android.widget.TextView fmMoreButton;
+    // FastMessenger: while there is text in the field, a small card with 3 actions floats above the send button
+    private android.widget.PopupWindow fmActionsPopup;
+    private int fmLastX = Integer.MIN_VALUE;
+    private int fmLastY = Integer.MIN_VALUE;
+    private boolean fmPreDrawAdded;
+    private final android.view.ViewTreeObserver.OnPreDrawListener fmPreDraw = () -> {
+        if (fmActionsPopup != null && fmActionsPopup.isShowing()) {
+            fmRepositionActions();
+        }
+        return true;
+    };
+    private final Runnable fmVisibilityCheck = new Runnable() {
+        @Override
+        public void run() {
+            if (fmActionsPopup != null && fmActionsPopup.isShowing()) {
+                if (messageEditText == null || !messageEditText.isShown() || messageEditText.getWindowToken() == null) {
+                    fmHideActions();
+                } else {
+                    AndroidUtilities.runOnUIThread(this, 500);
+                }
+            }
+        }
+    };
 
     private void fmUpdateMoreButton(Editable editable) {
-        if (fmMoreButton == null) {
+        boolean show = editable != null && editable.length() > 0 && !isInScheduleMode() && editingMessageObject == null
+                && parentFragment != null && messageEditText != null && messageEditText.isShown() && messageEditText.getWindowToken() != null;
+        if (show) {
+            fmShowActions();
+        } else {
+            fmHideActions();
+        }
+    }
+
+    private void fmHideActions() {
+        AndroidUtilities.cancelRunOnUIThread(fmVisibilityCheck);
+        if (fmActionsPopup != null) {
+            try {
+                fmActionsPopup.dismiss();
+            } catch (Throwable ignore) {
+            }
+            fmActionsPopup = null;
+        }
+    }
+
+    private void fmAddActionRow(LinearLayout card, int iconRes, String title, Runnable action) {
+        LinearLayout row = new LinearLayout(getContext());
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), 0, dp(16), 0);
+        row.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 2));
+        ImageView icon = new ImageView(getContext());
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_actionBarDefaultSubmenuItemIcon), PorterDuff.Mode.MULTIPLY));
+        row.addView(icon, LayoutHelper.createLinear(24, 24, Gravity.CENTER_VERTICAL));
+        TextView text = new TextView(getContext());
+        text.setText(title);
+        text.setTextSize(15);
+        text.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubmenuItem));
+        text.setSingleLine(true);
+        row.addView(text, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 14, 0, 0, 0));
+        row.setOnClickListener(v -> {
+            fmHideActions();
+            action.run();
+        });
+        card.addView(row, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 44));
+    }
+
+    private void fmShowActions() {
+        if (fmActionsPopup != null && fmActionsPopup.isShowing()) {
             return;
         }
-        boolean show = editable != null && editable.length() > 0 && !isInScheduleMode() && editingMessageObject == null;
-        fmMoreButton.setVisibility(show ? VISIBLE : GONE);
+        final boolean self = parentFragment != null && UserObject.isUserSelf(parentFragment.getCurrentUser());
+        final boolean canSchedule = parentFragment != null && parentFragment.canScheduleMessage();
+        final boolean canEffect = dialog_id > 0 && !self && sendButton != null;
+        final boolean canSilent = !(self || slowModeTimer > 0 && !isInScheduleMode());
+
+        LinearLayout card = new LinearLayout(getContext());
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(4), dp(6), dp(4), dp(6));
+        card.setBackgroundDrawable(Theme.createRoundRectDrawable(dp(14), getThemedColor(Theme.key_actionBarDefaultSubmenuBackground)));
+        int rows = 0;
+        if (canSchedule) {
+            rows++;
+            fmAddActionRow(card, R.drawable.msg_calendar2, getString(self ? R.string.SetReminder : R.string.ScheduleMessage), () -> {
+                AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), new AlertsCreator.ScheduleDatePickerDelegate() {
+                    @Override
+                    public void didSelectDate(boolean notify, int scheduleDate, int scheduleRepeatPeriod) {
+                        sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, 0, true);
+                    }
+                }, resourcesProvider);
+            });
+        }
+        if (canEffect) {
+            rows++;
+            fmAddActionRow(card, R.drawable.menu_premium_effects, "Animatsiyali effekt", () -> {
+                if (sendButton != null) {
+                    onSendLongClick(sendButton);
+                }
+            });
+        }
+        if (canSilent) {
+            rows++;
+            fmAddActionRow(card, R.drawable.input_notify_off, getString(R.string.SendWithoutSound), () -> {
+                sendMessageInternal(false, 0, 0, 0, true);
+            });
+        }
+        if (rows == 0) {
+            return;
+        }
+
+        fmActionsPopup = new android.widget.PopupWindow(card, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        fmActionsPopup.setFocusable(false);
+        fmActionsPopup.setOutsideTouchable(false);
+        fmActionsPopup.setTouchable(true);
+        fmActionsPopup.setInputMethodMode(android.widget.PopupWindow.INPUT_METHOD_NOT_NEEDED);
+        fmActionsPopup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        fmActionsPopup.setElevation(dp(6));
+        try {
+            int[] pos = fmActionsTarget(card);
+            fmActionsPopup.showAtLocation(messageEditText.getRootView(), Gravity.TOP | Gravity.START, pos[0], pos[1]);
+            fmLastX = pos[0];
+            fmLastY = pos[1];
+        } catch (Throwable t) {
+            fmActionsPopup = null;
+            return;
+        }
+        if (!fmPreDrawAdded) {
+            try {
+                messageEditText.getViewTreeObserver().addOnPreDrawListener(fmPreDraw);
+                fmPreDrawAdded = true;
+            } catch (Throwable ignore) {
+            }
+        }
+        AndroidUtilities.cancelRunOnUIThread(fmVisibilityCheck);
+        AndroidUtilities.runOnUIThread(fmVisibilityCheck, 500);
     }
+
+    private int[] fmActionsTarget(View card) {
+        card.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        int[] loc = new int[2];
+        messageEditText.getLocationOnScreen(loc);
+        int rootWidth = messageEditText.getRootView().getWidth();
+        int x = rootWidth - card.getMeasuredWidth() - dp(16);
+        int y = loc[1] - card.getMeasuredHeight() - dp(10);
+        return new int[]{x, y};
+    }
+
+    private void fmRepositionActions() {
+        try {
+            View card = fmActionsPopup.getContentView();
+            int[] pos = fmActionsTarget(card);
+            if (pos[0] != fmLastX || pos[1] != fmLastY) {
+                fmLastX = pos[0];
+                fmLastY = pos[1];
+                fmActionsPopup.update(pos[0], pos[1], -1, -1);
+            }
+        } catch (Throwable ignore) {
+        }
+    }
+
     private boolean onSendLongClick(View view) {
         if (isInScheduleMode() || parentFragment != null && parentFragment.getChatMode() == ChatActivity.MODE_QUICK_REPLIES || animatorEphemeralMessageVisibility.getValue()) {
             return false;
