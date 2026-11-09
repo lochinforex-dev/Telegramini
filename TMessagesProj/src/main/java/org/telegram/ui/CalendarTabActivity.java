@@ -262,9 +262,9 @@ public class CalendarTabActivity extends BaseFragment {
 
         pages = new View[]{
                 buildCalendarPage(context, bg, cardColor),
-                new TaqvimVazifalar(this, context, textColor, accent, cardColor),
+                new TaqvimVazifalar(this, context, textColor, 0xFF2ECC8F, cardColor),
                 new TaqvimQarzlar(this, context, textColor, accent, cardColor),
-                new TaqvimTasbeh(this, context, textColor, accent, cardColor),
+                new TaqvimTasbeh(this, context, textColor, 0xFFF08C00, cardColor),
                 new TaqvimHisoblagich(this, context, textColor, accent, cardColor),
                 new TaqvimHome(context, textColor, accent, cardColor, this::selectPage)
         };
@@ -353,7 +353,7 @@ public class CalendarTabActivity extends BaseFragment {
         hero.setOrientation(LinearLayout.VERTICAL);
         android.graphics.drawable.GradientDrawable heroBg = new android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+                new int[]{0xFFFF8A65, 0xFFF4511E});
         heroBg.setCornerRadius(dp(24));
         hero.setBackground(heroBg);
         hero.setPadding(dp(20), dp(16), dp(20), dp(16));

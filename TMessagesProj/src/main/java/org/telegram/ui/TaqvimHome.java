@@ -200,26 +200,26 @@ public class TaqvimHome extends FrameLayout {
         row1.setOrientation(LinearLayout.HORIZONTAL);
         row1.addView(card(ctx, 0, t("Kalendar", "Календарь", "Calendar"),
                 t("Voqealar, sanalar", "События, даты", "Events, dates"), -1,
-                0xFF4CB4FF, 0xFF2579E6, PAGE_CALENDAR, false), cell(true));
+                0xFFFF8A65, 0xFFF4511E, PAGE_CALENDAR, false), cell(true));
         row1.addView(card(ctx, 1, t("Vazifalar", "Задачи", "Tasks"), tasksSub, tasksProgress,
-                0xFF46DBA0, 0xFF17A974, PAGE_TASKS, false), cell(false));
+                0xFF2ECC8F, 0xFF14966A, PAGE_TASKS, false), cell(false));
         addRow(row1);
 
         LinearLayout row2 = new LinearLayout(ctx);
         row2.setOrientation(LinearLayout.HORIZONTAL);
         row2.addView(card(ctx, 2, t("Qarzlar", "Долги", "Debts"), debtsSub, -1,
-                0xFFFFAB5E, 0xFFF27320, PAGE_DEBTS, false), cell(true));
+                0xFFFF6B81, 0xFFD6336C, PAGE_DEBTS, false), cell(true));
         row2.addView(card(ctx, 3, t("Tasbeh", "Тасбих", "Tasbih"),
                 t("Bugun: ", "Сегодня: ", "Today: ") + tasbehToday, tasbehProgress,
-                0xFFA58BFF, 0xFF6D4CF0, PAGE_TASBEH, false), cell(false));
+                0xFFFFB74D, 0xFFF08C00, PAGE_TASBEH, false), cell(false));
         addRow(row2);
 
         LinearLayout.LayoutParams wideLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(86));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
         wideLp.topMargin = dp(12);
         root.addView(card(ctx, 4, t("Hisoblagich", "Калькулятор", "Calculator"),
                 t("Mingliklar bilan, qarzga yozish", "С разрядами, запись в долги", "With digit groups, add to debts"), -1,
-                0xFFFF82BD, 0xFFE63E8D, PAGE_CALC, true), wideLp);
+                0xFF3A4668, 0xFF232C47, PAGE_CALC, true), wideLp);
     }
 
     private LinearLayout.LayoutParams cell(boolean left) {
@@ -246,7 +246,7 @@ public class TaqvimHome extends FrameLayout {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(20), dp(16), dp(20), dp(16));
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF4AA8FF, 0xFF2B6FE0, 0xFF3B4FD6});
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
         bg.setCornerRadius(dp(26));
         card.setBackground(bg);
 
@@ -327,11 +327,13 @@ public class TaqvimHome extends FrameLayout {
         if (wide) {
             card.setGravity(Gravity.CENTER_VERTICAL);
         }
-        card.setBackground(Theme.createRoundRectDrawable(dp(22), cardColor));
+        GradientDrawable cardBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{colorA, colorB});
+        cardBg.setCornerRadius(dp(24));
+        card.setBackground(cardBg);
 
         FrameLayout tile = new FrameLayout(ctx);
-        GradientDrawable tileBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{colorA, colorB});
-        tileBg.setCornerRadius(dp(16));
+        GradientDrawable tileBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0x38FFFFFF, 0x38FFFFFF});
+        tileBg.setCornerRadius(dp(14));
         tile.setBackground(tileBg);
         IconView icon = new IconView(ctx, iconType);
         tile.addView(icon, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
@@ -342,9 +344,9 @@ public class TaqvimHome extends FrameLayout {
 
         TextView titleView = new TextView(ctx);
         titleView.setText(title);
-        titleView.setTextSize(16.5f);
+        titleView.setTextSize(18f);
         titleView.setTypeface(AndroidUtilities.bold());
-        titleView.setTextColor(textColor);
+        titleView.setTextColor(0xFFFFFFFF);
         titleView.setSingleLine(true);
         texts.addView(titleView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -352,14 +354,14 @@ public class TaqvimHome extends FrameLayout {
         TextView subView = new TextView(ctx);
         subView.setText(sub);
         subView.setTextSize(12.5f);
-        subView.setTextColor(ColorUtils.setAlphaComponent(textColor, 150));
+        subView.setTextColor(0xD9FFFFFF);
         subView.setSingleLine(true);
         subView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         texts.addView(subView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         if (progress >= 0) {
-            ProgressBar bar = new ProgressBar(ctx, progress, colorB);
+            ProgressBar bar = new ProgressBar(ctx, progress, 0xFFFFFFFF);
             LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(5));
             barLp.topMargin = dp(8);
@@ -373,7 +375,7 @@ public class TaqvimHome extends FrameLayout {
             TextView chevron = new TextView(ctx);
             chevron.setText("›");
             chevron.setTextSize(28);
-            chevron.setTextColor(ColorUtils.setAlphaComponent(textColor, 120));
+            chevron.setTextColor(0xB3FFFFFF);
             card.addView(chevron, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         } else {
@@ -410,7 +412,7 @@ public class TaqvimHome extends FrameLayout {
         protected void onDraw(Canvas canvas) {
             final float h = getHeight();
             rect.set(0, 0, getWidth(), h);
-            paint.setColor(ColorUtils.setAlphaComponent(color, 46));
+            paint.setColor(ColorUtils.setAlphaComponent(color, 70));
             canvas.drawRoundRect(rect, h / 2, h / 2, paint);
             if (value > 0) {
                 rect.set(0, 0, Math.max(h, getWidth() * value), h);

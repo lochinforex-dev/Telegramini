@@ -227,7 +227,17 @@ public class TaqvimHisoblagich extends FrameLayout {
         } else {
             bg = cardColor;
         }
-        tv.setBackground(round(bg, 22));
+        if (isEq) {
+            GradientDrawable eqBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+            eqBg.setCornerRadius(dp(22));
+            tv.setBackground(eqBg);
+        } else {
+            tv.setBackground(round(bg, 22));
+        }
+        if (key.equals("C")) {
+            tv.setTextColor(0xFFFF6B6B);
+        }
         tv.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.animate().scaleX(0.94f).scaleY(0.94f).setDuration(70).start();
