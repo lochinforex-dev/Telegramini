@@ -3439,7 +3439,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 // a new drawable (also when the view is recreated after a theme switch made elsewhere): remember its tint, the
                 // theme hook only recolors when the color differs from the last one applied
                 logoDrawable.setColorFilter(lastLogoDrawableColor = getThemedColor(Theme.key_telegram_color_dialogsLogo), PorterDuff.Mode.MULTIPLY);
-                SpannableStringBuilder ssb = new SpannableStringBuilder("FastMessenger");
+                SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));
+                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 actionBar.setTitle(ssb, statusDrawable);
                 updateStatus(UserConfig.getInstance(currentAccount).getCurrentUser(), false);
             }
@@ -13339,9 +13340,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             io.setTranslationY(-dp(64));
             return;
         }
-        final String fmLang = org.telegram.messenger.LocaleController.getInstance().getCurrentLocale().getLanguage();
-        final String fmAutoDeleteTitle = "uz".equals(fmLang) ? "Avto-o'chirish" : ("ru".equals(fmLang) ? "Автоудаление" : "Auto-delete");
-        io.add(R.drawable.msg_clear, fmAutoDeleteTitle, () -> presentFragment(new AutoDeleteMessagesActivity()));
+
         final boolean isCurrentThemeDark;
         if (resourceProvider != null) {
             isCurrentThemeDark = resourceProvider.isDark();
@@ -13393,7 +13392,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
             presentFragment(new ChatActivity(args));
         });
-        io.add(R.drawable.msg_secret, "Maxfiy chatlar", () -> PrivateChatUi.openFromTopBar(DialogsActivity.this));
         if (ApplicationLoader.applicationLoaderInstance != null) {
             ApplicationLoader.applicationLoaderInstance.addItemOptions(io);
         }
