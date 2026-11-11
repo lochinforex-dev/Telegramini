@@ -4,7 +4,13 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -18,8 +24,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+
+import org.telegram.messenger.R;
 
 import java.util.ArrayList;
 
@@ -81,7 +91,48 @@ public class UzScriptChip {
     private final EditText edit;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private PopupWindow popup;
-    private TextView chip;
+    private LinearLayout chip;
+    private TextView labelView;
+    private Chevron chevron;
+    private GradientDrawable chipBg;
+    private PopupWindow barPopup;
+    private LinearLayout bar;
+    private boolean barOpen;
+
+    /** Small chevron drawn by hand (no font or icon file needed): points up when closed, down when open. */
+    private static final class Chevron extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+        boolean up = true;
+
+        Chevron(Context context) {
+            super(context);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2));
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setColor(0xFF1A7FD0);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float cx = getWidth() / 2f;
+            float cy = getHeight() / 2f;
+            float w = dp(4.5f);
+            float h = dp(2.5f);
+            path.reset();
+            if (up) {
+                path.moveTo(cx - w, cy + h);
+                path.lineTo(cx, cy - h);
+                path.lineTo(cx + w, cy + h);
+            } else {
+                path.moveTo(cx - w, cy - h);
+                path.lineTo(cx, cy + h);
+                path.lineTo(cx + w, cy - h);
+            }
+            canvas.drawPath(path, paint);
+        }
+    }
     private int lastX = Integer.MIN_VALUE;
     private int lastY = Integer.MIN_VALUE;
 
@@ -167,19 +218,35 @@ public class UzScriptChip {
             return;
         }
         if (popup == null) {
-            chip = new TextView(edit.getContext());
-            chip.setText("Аб ⇄ Ab");
-            chip.setTextSize(13);
-            chip.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
-            chip.setTextColor(0xFF1A7FD0);
-            chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(14), dp(8), dp(14), dp(8));
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.WHITE);
-            bg.setCornerRadius(dp(18));
-            bg.setStroke(dp(1), 0x1F000000);
-            chip.setBackground(bg);
-            chip.setOnClickListener(v -> showMenu());
+            Context ctx = edit.getContext();
+            chip = new LinearLayout(ctx);
+            chip.setOrientation(LinearLayout.HORIZONTAL);
+            chip.setGravity(Gravity.CENTER_VERTICAL);
+            chipBg = new GradientDrawable();
+            chipBg.setColor(Color.WHITE);
+            chipBg.setCornerRadius(dp(18));
+            chipBg.setStroke(dp(1), 0x1F000000);
+            chip.setBackground(chipBg);
+
+            labelView = new TextView(ctx);
+            labelView.setText("Аб ⇄ Ab");
+            labelView.setTextSize(13);
+            labelView.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
+            labelView.setTextColor(0xFF1A7FD0);
+            labelView.setGravity(Gravity.CENTER);
+            labelView.setPadding(dp(14), dp(8), dp(4), dp(8));
+            labelView.setOnClickListener(v -> showMenu());
+            chip.addView(labelView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            chevron = new Chevron(ctx);
+            chevron.setOnClickListener(v -> {
+                barOpen = !barOpen;
+                syncChip();
+                updateBar();
+            });
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(30), dp(34));
+            clp.rightMargin = dp(6);
+            chip.addView(chevron, clp);
 
             popup = new PopupWindow(chip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             popup.setFocusable(false);
@@ -204,6 +271,7 @@ public class UzScriptChip {
             handler.removeCallbacks(visibilityCheck);
             handler.postDelayed(visibilityCheck, 500);
         }
+        updateBar();
     }
 
     private int[] target() {
@@ -212,7 +280,7 @@ public class UzScriptChip {
         int[] loc = new int[2];
         edit.getLocationOnScreen(loc);
         int rootWidth = edit.getRootView().getWidth();
-        int x = dp(16); // left side
+        int x = dp(16);
         int y = loc[1] - chip.getMeasuredHeight() - dp(14);
         return new int[]{x, y};
     }
@@ -224,6 +292,10 @@ public class UzScriptChip {
                 lastX = pos[0];
                 lastY = pos[1];
                 popup.update(pos[0], pos[1], -1, -1);
+                if (barPopup != null && barPopup.isShowing() && bar != null) {
+                    int[] bp = barTarget(pos);
+                    barPopup.update(bp[0], bp[1], -1, -1);
+                }
             }
         } catch (Throwable ignored) {
         }
@@ -231,11 +303,135 @@ public class UzScriptChip {
 
     private void hide() {
         handler.removeCallbacks(visibilityCheck);
+        barOpen = false;
+        hideBar();
+        syncChip();
         if (popup != null) {
             try {
                 popup.dismiss();
             } catch (Throwable ignored) {
             }
+        }
+    }
+
+
+    /* ---------------- style bar ---------------- */
+
+    private void syncChip() {
+        if (chevron != null) {
+            chevron.up = !barOpen;
+            chevron.invalidate();
+        }
+        if (chipBg != null) {
+            chipBg.setColor(barOpen ? 0xFFDCEBFA : Color.WHITE);
+        }
+    }
+
+    private int[] barTarget(int[] chipPos) {
+        bar.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        return new int[]{chipPos[0], chipPos[1] - bar.getMeasuredHeight() - dp(8)};
+    }
+
+    private void updateBar() {
+        if (barOpen && popup != null && popup.isShowing()) {
+            showBar();
+        } else {
+            hideBar();
+        }
+    }
+
+    private void hideBar() {
+        if (barPopup != null) {
+            try {
+                barPopup.dismiss();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private interface StyleAction {
+        void apply(EditTextCaption e);
+    }
+
+    private View styleButton(Context ctx, String label, int typefaceStyle, boolean underline, boolean strike, int iconRes, final StyleAction action) {
+        View v;
+        if (iconRes != 0) {
+            ImageView img = new ImageView(ctx);
+            img.setImageResource(iconRes);
+            img.setColorFilter(new PorterDuffColorFilter(0xFF2B3A4A, PorterDuff.Mode.SRC_IN));
+            img.setPadding(dp(8), dp(8), dp(8), dp(8));
+            v = img;
+        } else {
+            TextView t = new TextView(ctx);
+            t.setText(label);
+            t.setTextSize(16);
+            t.setGravity(Gravity.CENTER);
+            t.setTextColor(0xFF2B3A4A);
+            t.setTypeface(Typeface.defaultFromStyle(typefaceStyle));
+            int flags = t.getPaintFlags();
+            if (underline) {
+                flags |= Paint.UNDERLINE_TEXT_FLAG;
+            }
+            if (strike) {
+                flags |= Paint.STRIKE_THRU_TEXT_FLAG;
+            }
+            t.setPaintFlags(flags);
+            v = t;
+        }
+        v.setOnClickListener(x -> {
+            try {
+                if (edit instanceof EditTextCaption) {
+                    action.apply((EditTextCaption) edit);
+                }
+            } catch (Throwable ignored) {
+            }
+        });
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(36), dp(38)));
+        return v;
+    }
+
+    private void showBar() {
+        if (edit.getWindowToken() == null) {
+            return;
+        }
+        if (bar == null) {
+            Context ctx = edit.getContext();
+            bar = new LinearLayout(ctx);
+            bar.setOrientation(LinearLayout.HORIZONTAL);
+            bar.setGravity(Gravity.CENTER_VERTICAL);
+            bar.setPadding(dp(6), dp(3), dp(6), dp(3));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.WHITE);
+            bg.setCornerRadius(dp(20));
+            bg.setStroke(dp(1), 0x1F000000);
+            bar.setBackground(bg);
+            bar.addView(styleButton(ctx, "B", Typeface.BOLD, false, false, 0, e -> e.makeSelectedBold()));
+            bar.addView(styleButton(ctx, "I", Typeface.ITALIC, false, false, 0, e -> e.makeSelectedItalic()));
+            bar.addView(styleButton(ctx, "U", Typeface.NORMAL, true, false, 0, e -> e.makeSelectedUnderline()));
+            bar.addView(styleButton(ctx, "S", Typeface.NORMAL, false, true, 0, e -> e.makeSelectedStrike()));
+            bar.addView(styleButton(ctx, null, Typeface.NORMAL, false, false, R.drawable.msg_spoiler, e -> e.makeSelectedSpoiler()));
+            bar.addView(styleButton(ctx, "</>", Typeface.NORMAL, false, false, 0, e -> e.makeSelectedMono()));
+            bar.addView(styleButton(ctx, null, Typeface.NORMAL, false, false, R.drawable.msg_link, e -> e.makeSelectedUrl()));
+            bar.addView(styleButton(ctx, "\u275D", Typeface.NORMAL, false, false, 0, e -> e.makeSelectedQuote()));
+        }
+        if (barPopup == null) {
+            barPopup = new PopupWindow(bar, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            barPopup.setFocusable(false);
+            barPopup.setOutsideTouchable(false);
+            barPopup.setTouchable(true);
+            barPopup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+            barPopup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            barPopup.setElevation(dp(6));
+        }
+        try {
+            int[] pos = barTarget(target());
+            if (barPopup.isShowing()) {
+                barPopup.update(pos[0], pos[1], -1, -1);
+            } else {
+                barPopup.showAtLocation(edit.getRootView(), Gravity.TOP | Gravity.START, pos[0], pos[1]);
+            }
+        } catch (Throwable ignored) {
         }
     }
 
