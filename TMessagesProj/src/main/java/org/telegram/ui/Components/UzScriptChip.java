@@ -4,13 +4,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -24,18 +18,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
-
-import org.telegram.messenger.R;
 
 import java.util.ArrayList;
 
 /**
  * A small "Аб ⇄ Ab" chip that floats above the message field while there is text in it.
- * Tap it to change the writing system of the typed text (Cyrillic / Latin / new Latin).
+ * The arrow (\u2303) part opens a row of text style buttons (bold, italic, ...).
+ * Tap the text part to change the writing system of the typed text (Cyrillic / Latin / new Latin).
  * The text is changed only when the user chooses it, and it can be undone.
  *
  * Usage (one line): UzScriptChip.attach(messageEditText);
@@ -44,9 +35,23 @@ public class UzScriptChip {
 
     private static final java.util.WeakHashMap<View, Boolean> ATTACHED = new java.util.WeakHashMap<>();
 
+    /** Buttons of the right-hand pill: schedule / effect / silent send. Implemented by the input panel. */
+    public interface Actions {
+        boolean available();
+        boolean canSchedule();
+        boolean canSilent();
+        void schedule();
+        void effect();
+        void silent();
+    }
+
     public static void attach(EditText edit) {
+        attach(edit, null);
+    }
+
+    public static void attach(EditText edit, Actions actions) {
         if (edit != null && ATTACHED.put(edit, Boolean.TRUE) == null) {
-            new UzScriptChip(edit);
+            new UzScriptChip(edit, actions);
         }
     }
 
@@ -55,6 +60,10 @@ public class UzScriptChip {
      * The message field is looked up inside it a moment later, when it surely exists.
      */
     public static void attachTo(final View root) {
+        attachTo(root, null);
+    }
+
+    public static void attachTo(final View root, final Actions actions) {
         if (root == null) {
             return;
         }
@@ -64,7 +73,7 @@ public class UzScriptChip {
         finder[0] = () -> {
             EditText found = findEdit(root);
             if (found != null) {
-                attach(found);
+                attach(found, actions);
             } else if (++tries[0] < 30) {
                 h.postDelayed(finder[0], 300);
             }
@@ -91,48 +100,19 @@ public class UzScriptChip {
     private final EditText edit;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private PopupWindow popup;
-    private LinearLayout chip;
-    private TextView labelView;
-    private Chevron chevron;
-    private GradientDrawable chipBg;
-    private PopupWindow barPopup;
-    private LinearLayout bar;
-    private boolean barOpen;
-
-    /** Small chevron drawn by hand (no font or icon file needed): points up when closed, down when open. */
-    private static final class Chevron extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path path = new Path();
-        boolean up = true;
-
-        Chevron(Context context) {
-            super(context);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(2));
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setColor(0xFF1A7FD0);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            float cx = getWidth() / 2f;
-            float cy = getHeight() / 2f;
-            float w = dp(4.5f);
-            float h = dp(2.5f);
-            path.reset();
-            if (up) {
-                path.moveTo(cx - w, cy + h);
-                path.lineTo(cx, cy - h);
-                path.lineTo(cx + w, cy + h);
-            } else {
-                path.moveTo(cx - w, cy - h);
-                path.lineTo(cx, cy + h);
-                path.lineTo(cx + w, cy - h);
-            }
-            canvas.drawPath(path, paint);
-        }
-    }
+    private TextView chip;
+    private final Actions actions;
+    private PopupWindow optsPopup;
+    private int lastOx = Integer.MIN_VALUE;
+    private int lastOy = Integer.MIN_VALUE;
+    private android.widget.LinearLayout optsRow;
+    private TextView optSchedule, optEffect, optSilent;
+    private final int[] styleFlags = new int[9];
+    private final TextView[] styleButtons = new TextView[9];
+    private TextView arrow;
+    private android.widget.LinearLayout root;
+    private android.widget.LinearLayout styleRow;
+    private boolean styleOpen;
     private int lastX = Integer.MIN_VALUE;
     private int lastY = Integer.MIN_VALUE;
 
@@ -140,7 +120,7 @@ public class UzScriptChip {
     private String undoAfter;
 
     private final ViewTreeObserver.OnPreDrawListener preDraw = () -> {
-        if (popup != null && popup.isShowing()) {
+        if (popup != null && popup.isShowing() || optsPopup != null && optsPopup.isShowing()) {
             reposition();
         }
         return true;
@@ -159,8 +139,9 @@ public class UzScriptChip {
         }
     };
 
-    private UzScriptChip(EditText edit) {
+    private UzScriptChip(EditText edit, Actions actions) {
         this.edit = edit;
+        this.actions = actions;
         edit.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -192,6 +173,7 @@ public class UzScriptChip {
                 } catch (Throwable ignored) {
                 }
                 hide();
+                hideOpts();
             }
         });
         if (edit.isAttachedToWindow()) {
@@ -204,10 +186,16 @@ public class UzScriptChip {
     private void refresh() {
         try {
             Editable text = edit.getText();
-            if (text != null && text.length() > 0 && UzScript.detect(text) != UzScript.NONE && edit.isShown()) {
+            boolean hasText = text != null && text.length() > 0 && edit.isShown();
+            if (hasText && UzScript.detect(text) != UzScript.NONE) {
                 show();
             } else {
                 hide();
+            }
+            if (hasText && actions != null && actions.available()) {
+                showOpts();
+            } else {
+                hideOpts();
             }
         } catch (Throwable ignored) {
         }
@@ -219,36 +207,57 @@ public class UzScriptChip {
         }
         if (popup == null) {
             Context ctx = edit.getContext();
-            chip = new LinearLayout(ctx);
-            chip.setOrientation(LinearLayout.HORIZONTAL);
-            chip.setGravity(Gravity.CENTER_VERTICAL);
-            chipBg = new GradientDrawable();
-            chipBg.setColor(Color.WHITE);
-            chipBg.setCornerRadius(dp(18));
-            chipBg.setStroke(dp(1), 0x1F000000);
-            chip.setBackground(chipBg);
+            root = new android.widget.LinearLayout(ctx);
+            root.setOrientation(android.widget.LinearLayout.VERTICAL);
 
-            labelView = new TextView(ctx);
-            labelView.setText("Аб ⇄ Ab");
-            labelView.setTextSize(13);
-            labelView.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
-            labelView.setTextColor(0xFF1A7FD0);
-            labelView.setGravity(Gravity.CENTER);
-            labelView.setPadding(dp(14), dp(8), dp(4), dp(8));
-            labelView.setOnClickListener(v -> showMenu());
-            chip.addView(labelView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            styleRow = new android.widget.LinearLayout(ctx);
+            styleRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            styleRow.setGravity(Gravity.CENTER_VERTICAL);
+            styleRow.setPadding(dp(6), dp(2), dp(6), dp(2));
+            styleRow.setBackground(pill(Color.WHITE, 18));
+            styleRow.setVisibility(View.GONE);
+            addStyleButton(ctx, "B", 1);
+            addStyleButton(ctx, "I", 2);
+            addStyleButton(ctx, "U", 3);
+            addStyleButton(ctx, "S", 4);
+            addStyleButton(ctx, "\u25A6", 5);
+            addStyleButton(ctx, "</>", 6);
+            addStyleButton(ctx, "\uD83D\uDD17", 7);
+            addStyleButton(ctx, "\u275D", 8);
+            android.widget.LinearLayout.LayoutParams rowLp = new android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rowLp.bottomMargin = dp(6);
+            root.addView(styleRow, rowLp);
 
-            chevron = new Chevron(ctx);
-            chevron.setOnClickListener(v -> {
-                barOpen = !barOpen;
-                syncChip();
-                updateBar();
-            });
-            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(30), dp(34));
-            clp.rightMargin = dp(6);
-            chip.addView(chevron, clp);
+            android.widget.LinearLayout chipRow = new android.widget.LinearLayout(ctx);
+            chipRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            chipRow.setGravity(Gravity.CENTER_VERTICAL);
+            chipRow.setBackground(pill(Color.WHITE, 18));
 
-            popup = new PopupWindow(chip, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            chip = new TextView(ctx);
+            chip.setText("\u0410\u0431 \u21C4 Ab");
+            chip.setTextSize(13);
+            chip.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
+            chip.setTextColor(0xFF1A7FD0);
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(14), dp(8), dp(4), dp(8));
+            chip.setOnClickListener(v -> showMenu());
+            chipRow.addView(chip, new android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            // wide touch zone (about 40dp) so a small finger does not hit the text by mistake
+            arrow = new TextView(ctx);
+            arrow.setText("\u2303");
+            arrow.setTextSize(15);
+            arrow.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
+            arrow.setTextColor(0xFF1A7FD0);
+            arrow.setGravity(Gravity.CENTER);
+            arrow.setOnClickListener(v -> toggleStyleRow());
+            chipRow.addView(arrow, new android.widget.LinearLayout.LayoutParams(dp(40), dp(34)));
+            root.addView(chipRow, new android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            popup = new PopupWindow(root, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             popup.setFocusable(false);
             popup.setOutsideTouchable(false);
             popup.setTouchable(true);
@@ -271,41 +280,42 @@ public class UzScriptChip {
             handler.removeCallbacks(visibilityCheck);
             handler.postDelayed(visibilityCheck, 500);
         }
-        updateBar();
     }
 
     private int[] target() {
-        chip.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        root.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         int[] loc = new int[2];
         edit.getLocationOnScreen(loc);
-        int rootWidth = edit.getRootView().getWidth();
-        int x = dp(16);
-        int y = loc[1] - chip.getMeasuredHeight() - dp(14);
+        int x = dp(12);
+        int y = loc[1] - root.getMeasuredHeight() - dp(14);
         return new int[]{x, y};
     }
 
     private void reposition() {
         try {
+            if (optsPopup != null && optsPopup.isShowing()) {
+                repositionOpts();
+            }
+            if (styleOpen) {
+                updateActive();
+            }
+            if (popup == null || !popup.isShowing()) {
+                return;
+            }
             int[] pos = target();
             if (pos[0] != lastX || pos[1] != lastY) {
                 lastX = pos[0];
                 lastY = pos[1];
-                popup.update(pos[0], pos[1], -1, -1);
-                if (barPopup != null && barPopup.isShowing() && bar != null) {
-                    int[] bp = barTarget(pos);
-                    barPopup.update(bp[0], bp[1], -1, -1);
-                }
+                popup.update(pos[0], pos[1], root.getMeasuredWidth(), root.getMeasuredHeight());
             }
         } catch (Throwable ignored) {
         }
     }
 
     private void hide() {
+        setStyleOpen(false);
         handler.removeCallbacks(visibilityCheck);
-        barOpen = false;
-        hideBar();
-        syncChip();
         if (popup != null) {
             try {
                 popup.dismiss();
@@ -314,124 +324,181 @@ public class UzScriptChip {
         }
     }
 
+    /* ---------------- style row ---------------- */
 
-    /* ---------------- style bar ---------------- */
+    private static GradientDrawable pill(int color, int radiusDp) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(color);
+        bg.setCornerRadius(dp(radiusDp));
+        bg.setStroke(dp(1), 0x1F000000);
+        return bg;
+    }
 
-    private void syncChip() {
-        if (chevron != null) {
-            chevron.up = !barOpen;
-            chevron.invalidate();
+    private void addStyleButton(Context ctx, String label, final int kind) {
+        TextView b = new TextView(ctx);
+        android.text.SpannableString ss = new android.text.SpannableString(label);
+        if (kind == 1) {
+            ss.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, ss.length(), 0);
+        } else if (kind == 2) {
+            ss.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.ITALIC), 0, ss.length(), 0);
+        } else if (kind == 3) {
+            ss.setSpan(new android.text.style.UnderlineSpan(), 0, ss.length(), 0);
+        } else if (kind == 4) {
+            ss.setSpan(new android.text.style.StrikethroughSpan(), 0, ss.length(), 0);
         }
-        if (chipBg != null) {
-            chipBg.setColor(barOpen ? 0xFFDCEBFA : Color.WHITE);
+        b.setText(ss);
+        b.setTextSize(kind == 6 ? 12 : 16);
+        b.setTextColor(0xFF37474F);
+        b.setGravity(Gravity.CENTER);
+        b.setOnClickListener(v -> applyStyle(kind));
+        styleButtons[kind] = b;
+        styleFlags[kind] = kind == 1 ? TextStyleSpan.FLAG_STYLE_BOLD : kind == 2 ? TextStyleSpan.FLAG_STYLE_ITALIC
+                : kind == 3 ? TextStyleSpan.FLAG_STYLE_UNDERLINE : kind == 4 ? TextStyleSpan.FLAG_STYLE_STRIKE
+                : kind == 5 ? TextStyleSpan.FLAG_STYLE_SPOILER : kind == 6 ? TextStyleSpan.FLAG_STYLE_MONO
+                : kind == 7 ? TextStyleSpan.FLAG_STYLE_URL : TextStyleSpan.FLAG_STYLE_QUOTE;
+        styleRow.addView(b, new android.widget.LinearLayout.LayoutParams(dp(36), dp(34)));
+    }
+
+    private void toggleStyleRow() {
+        setStyleOpen(!styleOpen);
+        reposition();
+    }
+
+    private void setStyleOpen(boolean open) {
+        styleOpen = open;
+        if (styleRow == null || arrow == null) {
+            return;
+        }
+        styleRow.setVisibility(open ? View.VISIBLE : View.GONE);
+        arrow.setRotation(open ? 180f : 0f);
+        arrow.setBackground(open ? pill(0xFFDCEBFB, 18) : null);
+    }
+
+    private void applyStyle(int kind) {
+        if (!(edit instanceof EditTextCaption)) {
+            return;
+        }
+        if (edit.getSelectionStart() == edit.getSelectionEnd()) {
+            android.widget.Toast.makeText(edit.getContext(), "Avval matnning kerakli qismini belgilang", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        EditTextCaption c = (EditTextCaption) edit;
+        try {
+            switch (kind) {
+                case 1: case 2: case 3: case 4: case 5: case 6:
+                    c.toggleStyleForSelection(styleFlags[kind]);
+                    break;
+                case 7: c.makeSelectedUrl(); break;
+                case 8: c.makeSelectedQuote(); break;
+                default: break;
+            }
+        } catch (Throwable ignored) {
         }
     }
 
-    private int[] barTarget(int[] chipPos) {
-        bar.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        return new int[]{chipPos[0], chipPos[1] - bar.getMeasuredHeight() - dp(8)};
-    }
-
-    private void updateBar() {
-        if (barOpen && popup != null && popup.isShowing()) {
-            showBar();
-        } else {
-            hideBar();
+    private void updateActive() {
+        if (!(edit instanceof EditTextCaption)) {
+            return;
         }
-    }
-
-    private void hideBar() {
-        if (barPopup != null) {
+        int st = edit.getSelectionStart();
+        int en = edit.getSelectionEnd();
+        int cur = 0;
+        if (st != en) {
             try {
-                barPopup.dismiss();
+                cur = ((EditTextCaption) edit).getCurrentStyle(Math.min(st, en), Math.max(st, en));
             } catch (Throwable ignored) {
             }
         }
-    }
-
-    private interface StyleAction {
-        void apply(EditTextCaption e);
-    }
-
-    private View styleButton(Context ctx, String label, int typefaceStyle, boolean underline, boolean strike, int iconRes, final StyleAction action) {
-        View v;
-        if (iconRes != 0) {
-            ImageView img = new ImageView(ctx);
-            img.setImageResource(iconRes);
-            img.setColorFilter(new PorterDuffColorFilter(0xFF2B3A4A, PorterDuff.Mode.SRC_IN));
-            img.setPadding(dp(8), dp(8), dp(8), dp(8));
-            v = img;
-        } else {
-            TextView t = new TextView(ctx);
-            t.setText(label);
-            t.setTextSize(16);
-            t.setGravity(Gravity.CENTER);
-            t.setTextColor(0xFF2B3A4A);
-            t.setTypeface(Typeface.defaultFromStyle(typefaceStyle));
-            int flags = t.getPaintFlags();
-            if (underline) {
-                flags |= Paint.UNDERLINE_TEXT_FLAG;
+        for (int k = 1; k <= 8; k++) {
+            TextView b = styleButtons[k];
+            if (b == null) {
+                continue;
             }
-            if (strike) {
-                flags |= Paint.STRIKE_THRU_TEXT_FLAG;
-            }
-            t.setPaintFlags(flags);
-            v = t;
+            boolean on = (cur & styleFlags[k]) != 0;
+            b.setTextColor(on ? 0xFF1A7FD0 : 0xFF37474F);
+            b.setBackground(on ? pill(0xFFDCEBFB, 17) : null);
         }
-        v.setOnClickListener(x -> {
-            try {
-                if (edit instanceof EditTextCaption) {
-                    action.apply((EditTextCaption) edit);
-                }
-            } catch (Throwable ignored) {
-            }
-        });
-        v.setLayoutParams(new LinearLayout.LayoutParams(dp(36), dp(38)));
-        return v;
     }
 
-    private void showBar() {
+    /* ---------------- right pill: schedule / effect / silent ---------------- */
+
+    private TextView optButton(Context ctx, String glyph, int color, View.OnClickListener l) {
+        TextView t = new TextView(ctx);
+        t.setText(glyph);
+        t.setTextSize(18);
+        t.setTextColor(color);
+        t.setGravity(Gravity.CENTER);
+        t.setOnClickListener(l);
+        optsRow.addView(t, new android.widget.LinearLayout.LayoutParams(dp(40), dp(36)));
+        return t;
+    }
+
+    private void showOpts() {
         if (edit.getWindowToken() == null) {
             return;
         }
-        if (bar == null) {
+        if (optsPopup == null) {
             Context ctx = edit.getContext();
-            bar = new LinearLayout(ctx);
-            bar.setOrientation(LinearLayout.HORIZONTAL);
-            bar.setGravity(Gravity.CENTER_VERTICAL);
-            bar.setPadding(dp(6), dp(3), dp(6), dp(3));
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(Color.WHITE);
-            bg.setCornerRadius(dp(20));
-            bg.setStroke(dp(1), 0x1F000000);
-            bar.setBackground(bg);
-            bar.addView(styleButton(ctx, "B", Typeface.BOLD, false, false, 0, e -> e.makeSelectedBold()));
-            bar.addView(styleButton(ctx, "I", Typeface.ITALIC, false, false, 0, e -> e.makeSelectedItalic()));
-            bar.addView(styleButton(ctx, "U", Typeface.NORMAL, true, false, 0, e -> e.makeSelectedUnderline()));
-            bar.addView(styleButton(ctx, "S", Typeface.NORMAL, false, true, 0, e -> e.makeSelectedStrike()));
-            bar.addView(styleButton(ctx, null, Typeface.NORMAL, false, false, R.drawable.msg_spoiler, e -> e.makeSelectedSpoiler()));
-            bar.addView(styleButton(ctx, "</>", Typeface.NORMAL, false, false, 0, e -> e.makeSelectedMono()));
-            bar.addView(styleButton(ctx, null, Typeface.NORMAL, false, false, R.drawable.msg_link, e -> e.makeSelectedUrl()));
-            bar.addView(styleButton(ctx, "\u275D", Typeface.NORMAL, false, false, 0, e -> e.makeSelectedQuote()));
+            optsRow = new android.widget.LinearLayout(ctx);
+            optsRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            optsRow.setGravity(Gravity.CENTER_VERTICAL);
+            optsRow.setPadding(dp(6), dp(2), dp(6), dp(2));
+            optsRow.setBackground(pill(Color.WHITE, 20));
+            optSchedule = optButton(ctx, "\uD83D\uDCC5", 0xFF2F86D6, v -> actions.schedule());
+            optEffect = optButton(ctx, "\u2728", 0xFF7A5AF0, v -> actions.effect());
+            optSilent = optButton(ctx, "\uD83D\uDD15", 0xFFE0603A, v -> actions.silent());
+            optsPopup = new PopupWindow(optsRow, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            optsPopup.setFocusable(false);
+            optsPopup.setOutsideTouchable(false);
+            optsPopup.setTouchable(true);
+            optsPopup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+            optsPopup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            optsPopup.setElevation(dp(6));
         }
-        if (barPopup == null) {
-            barPopup = new PopupWindow(bar, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            barPopup.setFocusable(false);
-            barPopup.setOutsideTouchable(false);
-            barPopup.setTouchable(true);
-            barPopup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
-            barPopup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            barPopup.setElevation(dp(6));
+        optSchedule.setVisibility(actions.canSchedule() ? View.VISIBLE : View.GONE);
+        optSilent.setVisibility(actions.canSilent() ? View.VISIBLE : View.GONE);
+        if (!optsPopup.isShowing()) {
+            try {
+                int[] pos = optsTarget();
+                optsPopup.showAtLocation(edit.getRootView(), Gravity.TOP | Gravity.START, pos[0], pos[1]);
+                lastOx = pos[0];
+                lastOy = pos[1];
+            } catch (Throwable ignored) {
+                optsPopup = null;
+            }
+        } else {
+            repositionOpts();
         }
+    }
+
+    private int[] optsTarget() {
+        optsRow.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int[] loc = new int[2];
+        edit.getLocationOnScreen(loc);
+        int x = edit.getRootView().getWidth() - optsRow.getMeasuredWidth() - dp(12);
+        int y = loc[1] - optsRow.getMeasuredHeight() - dp(14);
+        return new int[]{x, y};
+    }
+
+    private void repositionOpts() {
         try {
-            int[] pos = barTarget(target());
-            if (barPopup.isShowing()) {
-                barPopup.update(pos[0], pos[1], -1, -1);
-            } else {
-                barPopup.showAtLocation(edit.getRootView(), Gravity.TOP | Gravity.START, pos[0], pos[1]);
+            int[] pos = optsTarget();
+            if (pos[0] != lastOx || pos[1] != lastOy) {
+                lastOx = pos[0];
+                lastOy = pos[1];
+                optsPopup.update(pos[0], pos[1], optsRow.getMeasuredWidth(), optsRow.getMeasuredHeight());
             }
         } catch (Throwable ignored) {
+        }
+    }
+
+    private void hideOpts() {
+        if (optsPopup != null) {
+            try {
+                optsPopup.dismiss();
+            } catch (Throwable ignored) {
+            }
         }
     }
 
