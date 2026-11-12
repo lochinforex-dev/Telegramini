@@ -378,9 +378,15 @@ public class UzScriptChip {
         if (!(edit instanceof EditTextCaption)) {
             return;
         }
-        if (edit.getSelectionStart() == edit.getSelectionEnd()) {
-            android.widget.Toast.makeText(edit.getContext(), "Avval matnning kerakli qismini belgilang", android.widget.Toast.LENGTH_SHORT).show();
+        Editable all = edit.getText();
+        if (all == null || all.length() == 0) {
             return;
+        }
+        // nothing selected: apply to the whole text (like the Cyrillic/Latin switch does)
+        final boolean wholeText = edit.getSelectionStart() == edit.getSelectionEnd();
+        final int cursor = edit.getSelectionEnd();
+        if (wholeText) {
+            edit.setSelection(0, all.length());
         }
         EditTextCaption c = (EditTextCaption) edit;
         try {
@@ -394,6 +400,12 @@ public class UzScriptChip {
             }
         } catch (Throwable ignored) {
         }
+        if (wholeText) {
+            try {
+                edit.setSelection(Math.min(Math.max(cursor, 0), edit.getText().length()));
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     private void updateActive() {
@@ -403,6 +415,11 @@ public class UzScriptChip {
         int st = edit.getSelectionStart();
         int en = edit.getSelectionEnd();
         int cur = 0;
+        Editable txt = edit.getText();
+        if (st == en && txt != null) {
+            st = 0;
+            en = txt.length();
+        }
         if (st != en) {
             try {
                 cur = ((EditTextCaption) edit).getCurrentStyle(Math.min(st, en), Math.max(st, en));
