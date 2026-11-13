@@ -44,6 +44,7 @@ public class TaqvimHome extends FrameLayout {
     public static final int PAGE_DEBTS = 2;
     public static final int PAGE_TASBEH = 3;
     public static final int PAGE_CALC = 4;
+    public static final int PAGE_TABRIK = 6;
 
     private final int textColor;
     private final int accent;
@@ -220,6 +221,13 @@ public class TaqvimHome extends FrameLayout {
         root.addView(card(ctx, 4, t("Hisoblagich", "Калькулятор", "Calculator"),
                 t("Mingliklar bilan, qarzga yozish", "С разрядами, запись в долги", "With digit groups, add to debts"), -1,
                 0xFF3A4668, 0xFF232C47, PAGE_CALC, true), wideLp);
+
+        LinearLayout.LayoutParams tabrikLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
+        tabrikLp.topMargin = dp(12);
+        root.addView(card(ctx, 5, t("Tabriklar", "Поздравления", "Greetings"),
+                t("Tug'ilgan kun, Yangi yil: chiroyli dizaynlar", "День рождения, Новый год: красивые дизайны", "Birthday, New Year: beautiful designs"), -1,
+                0xFFE2557A, 0xFF8A5BD6, PAGE_TABRIK, true), tabrikLp);
     }
 
     private LinearLayout.LayoutParams cell(boolean left) {
@@ -477,6 +485,15 @@ public class TaqvimHome extends FrameLayout {
                     c.drawLine(12f * u, 17.5f * u, 12f * u, 20f * u, stroke);
                     c.drawLine(4f * u, 12f * u, 6.5f * u, 12f * u, stroke);
                     c.drawLine(17.5f * u, 12f * u, 20f * u, 12f * u, stroke);
+                    break;
+                case 5: // gift
+                    rect.set(4f * u, 11f * u, 20f * u, 21f * u);
+                    c.drawRect(rect, stroke);
+                    rect.set(3f * u, 7.5f * u, 21f * u, 11f * u);
+                    c.drawRect(rect, stroke);
+                    c.drawLine(12f * u, 7.5f * u, 12f * u, 21f * u, stroke);
+                    c.drawCircle(9.2f * u, 5f * u, 2.4f * u, stroke);
+                    c.drawCircle(14.8f * u, 5f * u, 2.4f * u, stroke);
                     break;
                 default: // calculator
                     rect.set(5f * u, 3f * u, 19f * u, 21f * u);
