@@ -152,25 +152,20 @@ public class TaqvimTabrik extends FrameLayout {
         swatches.clear();
         final Context ctx = getContext();
         LinearLayout root = begin();
-        final int[][] cols = {{0xFFE2557A, 0xFFF6A54B}, {0xFF2B5A9E, 0xFF0F2447}};
-        final String[] names = {
-                t("Tug'ilgan kun", "День рождения", "Birthday"),
-                t("Yangi yil", "Новый год", "New Year")
-        };
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < TabrikCards.categoryCount(); i++) {
             final int category = i;
             LinearLayout card = new LinearLayout(ctx);
             card.setOrientation(LinearLayout.HORIZONTAL);
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPadding(dp(18), dp(12), dp(14), dp(12));
-            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, cols[i]);
+            GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, TabrikCards.categoryColors(i));
             bg.setCornerRadius(dp(24));
             card.setBackground(bg);
 
             LinearLayout texts = new LinearLayout(ctx);
             texts.setOrientation(LinearLayout.VERTICAL);
             TextView title = new TextView(ctx);
-            title.setText(names[i]);
+            title.setText(TabrikCards.categoryName(i));
             title.setTextSize(20);
             title.setTypeface(AndroidUtilities.bold());
             title.setTextColor(0xFFFFFFFF);
@@ -185,7 +180,7 @@ public class TaqvimTabrik extends FrameLayout {
             TabrikView thumb = new TabrikView(ctx);
             thumb.set(TabrikCards.designs(i)[0], -1, TabrikCards.title(i),
                     TabrikCards.template(i, 2, ""), "");
-            card.addView(thumb, new LinearLayout.LayoutParams(dp(78), ViewGroup.LayoutParams.WRAP_CONTENT));
+            card.addView(thumb, new LinearLayout.LayoutParams(dp(60), ViewGroup.LayoutParams.WRAP_CONTENT));
 
             card.setOnClickListener(v -> showGrid(category));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -207,8 +202,7 @@ public class TaqvimTabrik extends FrameLayout {
         root.addView(backRow(t("Turkumlar", "Категории", "Categories")));
 
         TextView head = new TextView(ctx);
-        head.setText(category == TabrikCards.CAT_NEWYEAR ? t("Yangi yil", "Новый год", "New Year")
-                : t("Tug'ilgan kun", "День рождения", "Birthday"));
+        head.setText(TabrikCards.categoryName(category));
         head.setTextSize(20);
         head.setTypeface(AndroidUtilities.bold());
         head.setTextColor(textColor);
@@ -342,10 +336,10 @@ public class TaqvimTabrik extends FrameLayout {
         hs.setHorizontalScrollBarEnabled(false);
         LinearLayout chipRow = new LinearLayout(ctx);
         chipRow.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 0; i < TabrikCards.TEMPLATE_NAMES.length; i++) {
+        for (int i = 0; i < TabrikCards.templateNames(cat).length; i++) {
             final int ti = i;
             TextView chip = new TextView(ctx);
-            chip.setText(TabrikCards.TEMPLATE_NAMES[i]);
+            chip.setText(TabrikCards.templateNames(cat)[i]);
             chip.setTextSize(14);
             chip.setTypeface(AndroidUtilities.bold());
             chip.setPadding(dp(16), dp(8), dp(16), dp(8));

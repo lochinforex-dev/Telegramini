@@ -25,16 +25,15 @@ import java.util.Locale;
  */
 public final class TabrikCards {
 
-    public static final int CAT_BIRTHDAY = 0;
-    public static final int CAT_NEWYEAR = 1;
-
     // background decorations
     private static final int D_NONE = 0, D_CONFETTI = 1, D_FRAME = 2, D_BALLOONS = 3, D_CARD = 4, D_RIBBON = 5,
             D_CLOUDS = 6, D_STRIPES = 7, D_SNOW = 8, D_LIGHTS = 9, D_BOTTOM = 10, D_GROUND = 11,
-            D_FIREWORKS = 12, D_STARS = 13, D_GIFTS = 14, D_BUBBLES = 15;
+            D_FIREWORKS = 12, D_STARS = 13, D_GIFTS = 14, D_BUBBLES = 15, D_FLOWERS = 16, D_RAYS = 17,
+            D_HEARTS = 18, D_FLAGBAND = 19;
     // icons
     private static final int I_NONE = 0, I_CAKE = 1, I_SPARKLE = 2, I_STAR = 3, I_GIFT = 4, I_CROWN = 5,
-            I_BALLOON = 6, I_SNOWFLAKE = 7, I_TREE = 8, I_BELL = 9, I_SNOWMAN = 10, I_CLOCK = 11;
+            I_BALLOON = 6, I_SNOWFLAKE = 7, I_TREE = 8, I_BELL = 9, I_SNOWMAN = 10, I_CLOCK = 11,
+            I_MOON = 12, I_FLOWER = 13, I_SUN = 14, I_HEART = 15, I_BOOK = 16, I_FLAG = 17, I_SHIELD = 18;
     // big line
     private static final int B_NONE = 0, B_YEAR = 1, B_MIDNIGHT = 2;
 
@@ -66,31 +65,31 @@ public final class TabrikCards {
         }
     }
 
-    private static final Design[] BIRTHDAY = {
-            new Design("Quyosh botishi", 0xFFF6A54B, 0xFFE2557A, 1, D_NONE, I_CAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
-            new Design("Konfetti", 0xFF7B6BD6, 0xFF3A4FB0, 1, D_CONFETTI, I_SPARKLE, 0xFFF2C14E, 0xFFFFFFFF, 0, B_NONE),
-            new Design("Tilla ramka", 0xFF10203A, 0xFF10203A, 0, D_FRAME, I_STAR, 0xFFE8C872, 0xFFE8C872, 1, B_NONE),
-            new Design("Sharlar", 0xFFFFD9E4, 0xFFFFD9E4, 0, D_BALLOONS, I_NONE, 0xFFA02A55, 0xFFA02A55, 0, B_NONE),
-            new Design("Oq kartochka", 0xFF4FB28F, 0xFF4FB28F, 0, D_CARD, I_GIFT, 0xFF1F5E47, 0xFF1F5E47, 0, B_NONE),
-            new Design("Neon", 0xFF0B0B12, 0xFF0B0B12, 0, D_NONE, I_SPARKLE, 0xFF5FF0E0, 0xFFFF5FA8, 2, B_NONE),
-            new Design("Lenta", 0xFFC0492F, 0xFFC0492F, 0, D_RIBBON, I_CAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
-            new Design("Osmon", 0xFF5AA6E8, 0xFFBFE3FF, 2, D_CLOUDS, I_BALLOON, 0xFFE2557A, 0xFF1D4F86, 0, B_NONE),
-            new Design("Oltin", 0xFFF2C14E, 0xFFD9822B, 1, D_NONE, I_CROWN, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
-            new Design("Kamalak", 0xFFE2557A, 0xFFE2557A, 0, D_STRIPES, I_NONE, 0xFF2A2A2A, 0xFF2A2A2A, 0, B_NONE),
-    };
+    private static final class Cat {
+        final String name;
+        final String title;
+        final String[] tplNames;
+        final String[] bodies;
+        final Design[] designs;
+        final int colorA, colorB;
 
-    private static final Design[] NEWYEAR = {
-            new Design("Qishki tun", 0xFF0F2447, 0xFF2B5A9E, 2, D_SNOW, I_SNOWFLAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
-            new Design("Archa", 0xFF13412C, 0xFF13412C, 0, D_LIGHTS, I_TREE, 0xFF4FB28F, 0xFFF2D27A, 0, B_NONE),
-            new Design("Qizil va oq", 0xFFC0392F, 0xFFC0392F, 0, D_BOTTOM, I_BELL, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
-            new Design("Qorbobo", 0xFFCFE8FB, 0xFFCFE8FB, 0, D_GROUND, I_SNOWMAN, 0xFF1D4F86, 0xFF1D4F86, 0, B_NONE),
-            new Design("Salyut", 0xFF0A0A14, 0xFF0A0A14, 0, D_FIREWORKS, I_NONE, 0xFFF2C14E, 0xFFFFFFFF, 0, B_YEAR),
-            new Design("Yarim tun", 0xFF2A1A4A, 0xFF2A1A4A, 0, D_NONE, I_CLOCK, 0xFFF2C14E, 0xFFFFFFFF, 0, B_MIDNIGHT),
-            new Design("Tilla yulduzlar", 0xFF10203A, 0xFF10203A, 0, D_STARS, I_NONE, 0xFFE8C872, 0xFFE8C872, 1, B_NONE),
-            new Design("Konfetti", 0xFFE2557A, 0xFF6B3AA8, 1, D_CONFETTI, I_NONE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_YEAR),
-            new Design("Sovg'alar", 0xFF2E8B6E, 0xFF2E8B6E, 0, D_GIFTS, I_NONE, 0xFF1F5E47, 0xFF1F5E47, 0, B_NONE),
-            new Design("Shampan", 0xFFF2D27A, 0xFFD9A02B, 1, D_BUBBLES, I_SPARKLE, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
-    };
+        Cat(String name, String title, int colorA, int colorB, String[] tplNames, String[] bodies, Design[] designs) {
+            this.name = name;
+            this.title = title;
+            this.colorA = colorA;
+            this.colorB = colorB;
+            this.tplNames = tplNames;
+            this.bodies = bodies;
+            this.designs = designs;
+        }
+    }
+
+    private static Design dz(String name, int c1, int c2, int mode, int deco, int icon, int iconColor, int text, int font, int big) {
+        return new Design(name, c1, c2, mode, deco, icon, iconColor, text, font, big);
+    }
+
+    private static final String[] NAMES_FUN = {"Samimiy", "Rasmiy", "Qisqa", "Hazil"};
+    private static final String[] NAMES_POEM = {"Samimiy", "Rasmiy", "Qisqa", "She'riy"};
 
     /** Colours offered in the editor (replace the background of the design). */
     public static final int[][] PALETTE = {
@@ -101,41 +100,188 @@ public final class TabrikCards {
             {0xFFD9822B, 0xFFF2C14E},
     };
 
-    private static final String[] TITLES = {"Tug'ilgan kuningiz muborak!", "Yangi yil muborak!"};
-
-    private static final String[][] BODIES = {
-            {
+    private static final Cat[] CATS = {
+            // ---------------- Tug'ilgan kun ----------------
+            new Cat("Tug'ilgan kun", "Tug'ilgan kuningiz muborak!", 0xFFE2557A, 0xFFF6A54B, NAMES_FUN, new String[]{
                     "Aziz {to}! Sizni tug'ilgan kuningiz bilan chin qalbimdan tabriklayman. Sizga sog'lik, baxt, oilaviy farovonlik va barcha orzularingiz ushalishini tilayman. Hayotingiz yorqin va mazmunli bo'lsin!",
                     "Hurmatli {to}! Tug'ilgan kuningiz munosabati bilan sizni samimiy tabriklaymiz. Sizga mustahkam sog'lik, ishlaringizda muvaffaqiyat va oila baxti tilaymiz.",
                     "{to}, tug'ilgan kuningiz muborak! Doim baxtli va sog' bo'ling!",
-                    "{to}, yoshingiz yana bir yoshga ulg'aydi, aqlingiz ham shunga yarasha o'ssin! Tug'ilgan kuningiz bilan, tortdan esa menga ham ulush qoldiring!",
-            },
-            {
+                    "{to}, yoshingiz yana bir yoshga ulg'aydi, aqlingiz ham shunga yarasha o'ssin! Tug'ilgan kuningiz bilan, tortdan esa menga ham ulush qoldiring!"
+            }, new Design[]{
+                    dz("Quyosh botishi", 0xFFF6A54B, 0xFFE2557A, 1, D_NONE, I_CAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Konfetti", 0xFF7B6BD6, 0xFF3A4FB0, 1, D_CONFETTI, I_SPARKLE, 0xFFF2C14E, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Tilla ramka", 0xFF10203A, 0xFF10203A, 0, D_FRAME, I_STAR, 0xFFE8C872, 0xFFE8C872, 1, B_NONE),
+                    dz("Sharlar", 0xFFFFD9E4, 0xFFFFD9E4, 0, D_BALLOONS, I_NONE, 0xFFA02A55, 0xFFA02A55, 0, B_NONE),
+                    dz("Oq kartochka", 0xFF4FB28F, 0xFF4FB28F, 0, D_CARD, I_GIFT, 0xFF1F5E47, 0xFF1F5E47, 0, B_NONE),
+                    dz("Neon", 0xFF0B0B12, 0xFF0B0B12, 0, D_NONE, I_SPARKLE, 0xFF5FF0E0, 0xFFFF5FA8, 2, B_NONE),
+                    dz("Lenta", 0xFFC0492F, 0xFFC0492F, 0, D_RIBBON, I_CAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Osmon", 0xFF5AA6E8, 0xFFBFE3FF, 2, D_CLOUDS, I_BALLOON, 0xFFE2557A, 0xFF1D4F86, 0, B_NONE),
+                    dz("Oltin", 0xFFF2C14E, 0xFFD9822B, 1, D_NONE, I_CROWN, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
+                    dz("Kamalak", 0xFFE2557A, 0xFFE2557A, 0, D_STRIPES, I_NONE, 0xFF2A2A2A, 0xFF2A2A2A, 0, B_NONE)
+            }),
+            // ---------------- Yangi yil ----------------
+            new Cat("Yangi yil", "Yangi yil muborak!", 0xFF2B5A9E, 0xFF0F2447, NAMES_FUN, new String[]{
                     "Aziz {to}! Yangi yil bilan chin qalbimdan tabriklayman. Kirib kelayotgan yil sizga sog'lik, xursandchilik va yangi imkoniyatlar olib kelsin. Barcha orzularingiz ushalsin!",
                     "Hurmatli {to}! Sizni Yangi yil bayrami bilan samimiy tabriklaymiz. Yangi yilda ishlaringizga omad, oilangizga farovonlik va tinchlik tilaymiz.",
                     "{to}, Yangi yilingiz muborak! Baxtli va sog' bo'ling!",
-                    "{to}, Yangi yilda kamroq ish, ko'proq dam olish va ko'proq mandarin tilayman! Yangi yil bilan!",
-            }
+                    "{to}, Yangi yilda kamroq ish, ko'proq dam olish va ko'proq mandarin tilayman! Yangi yil bilan!"
+            }, new Design[]{
+                    dz("Qishki tun", 0xFF0F2447, 0xFF2B5A9E, 2, D_SNOW, I_SNOWFLAKE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Archa", 0xFF13412C, 0xFF13412C, 0, D_LIGHTS, I_TREE, 0xFF4FB28F, 0xFFF2D27A, 0, B_NONE),
+                    dz("Qizil va oq", 0xFFC0392F, 0xFFC0392F, 0, D_BOTTOM, I_BELL, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Qorbobo", 0xFFCFE8FB, 0xFFCFE8FB, 0, D_GROUND, I_SNOWMAN, 0xFF1D4F86, 0xFF1D4F86, 0, B_NONE),
+                    dz("Salyut", 0xFF0A0A14, 0xFF0A0A14, 0, D_FIREWORKS, I_NONE, 0xFFF2C14E, 0xFFFFFFFF, 0, B_YEAR),
+                    dz("Yarim tun", 0xFF2A1A4A, 0xFF2A1A4A, 0, D_NONE, I_CLOCK, 0xFFF2C14E, 0xFFFFFFFF, 0, B_MIDNIGHT),
+                    dz("Tilla yulduzlar", 0xFF10203A, 0xFF10203A, 0, D_STARS, I_NONE, 0xFFE8C872, 0xFFE8C872, 1, B_NONE),
+                    dz("Konfetti", 0xFFE2557A, 0xFF6B3AA8, 1, D_CONFETTI, I_NONE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_YEAR),
+                    dz("Sovg'alar", 0xFF2E8B6E, 0xFF2E8B6E, 0, D_GIFTS, I_NONE, 0xFF1F5E47, 0xFF1F5E47, 0, B_NONE),
+                    dz("Shampan", 0xFFF2D27A, 0xFFD9A02B, 1, D_BUBBLES, I_SPARKLE, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE)
+            }),
+            // ---------------- Hayit ----------------
+            new Cat("Hayit", "Hayitingiz muborak!", 0xFF1B7F6A, 0xFF0E4B3A, NAMES_POEM, new String[]{
+                    "Aziz {to}! Sizni muborak Hayit bayrami bilan chin qalbimdan tabriklayman. Qilgan ibodat va duolaringiz qabul bo'lsin. Oilangizga sog'lik, baxt va tinchlik tilayman!",
+                    "Hurmatli {to}! Sizni Hayit bayrami bilan samimiy tabriklaymiz. Bu ulug' kunlar uyingizga baraka, oilangizga tinchlik va farovonlik olib kelsin.",
+                    "{to}, Hayitingiz muborak bo'lsin! Duolaringiz ijobat bo'lsin!",
+                    "{to}, Hayitingiz muborak bo'lsin,\nUyingizga baraka to'lsin.\nDuolaringiz ijobat bo'lib,\nDillaringiz nurga to'lsin!"
+            }, new Design[]{
+                    dz("Tungi osmon", 0xFF0C1B3A, 0xFF1F4E8C, 2, D_STARS, I_MOON, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Zumrad", 0xFF0E4B3A, 0xFF0E4B3A, 0, D_FRAME, I_MOON, 0xFFF2D27A, 0xFFF2D27A, 1, B_NONE),
+                    dz("Oq kartochka", 0xFF1F8A6A, 0xFF1F8A6A, 0, D_CARD, I_MOON, 0xFF1F8A6A, 0xFF14513E, 0, B_NONE),
+                    dz("Tilla", 0xFFF2D27A, 0xFFD9A02B, 1, D_NONE, I_STAR, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
+                    dz("Chiroqlar", 0xFF14284B, 0xFF14284B, 0, D_LIGHTS, I_MOON, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Yashil osmon", 0xFF1B7F6A, 0xFF0E4B3A, 2, D_STARS, I_SPARKLE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Qum rangi", 0xFFF3E7CF, 0xFFF3E7CF, 0, D_FRAME, I_MOON, 0xFF8A5A1F, 0xFF6B4423, 1, B_NONE),
+                    dz("Binafsha", 0xFF3A2A6B, 0xFF6B4AA8, 1, D_BUBBLES, I_MOON, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Moviy", 0xFF2B7BD6, 0xFF5AA6E8, 2, D_CLOUDS, I_STAR, 0xFFFFFFFF, 0xFF0E2F5A, 0, B_NONE),
+                    dz("Qora va oltin", 0xFF0B0B12, 0xFF0B0B12, 0, D_NONE, I_MOON, 0xFFE8C872, 0xFFE8C872, 2, B_NONE)
+            }),
+            // ---------------- Navro'z ----------------
+            new Cat("Navro'z", "Navro'z bayrami muborak!", 0xFFFFB347, 0xFF2FAE7A, NAMES_FUN, new String[]{
+                    "Aziz {to}! Sizni Navro'z bayrami bilan chin qalbimdan tabriklayman. Bahor kabi hayotingiz ham yashnab, uyingizga baraka, dilingizga xursandchilik kirib kelsin!",
+                    "Hurmatli {to}! Sizni Navro'z bayrami bilan samimiy tabriklaymiz. Yangi bahor sizga sog'lik, oilangizga baxt va ishlaringizga omad olib kelsin.",
+                    "{to}, Navro'z muborak! Bahoringiz gulga to'lsin!",
+                    "{to}, Navro'z muborak! Sumalak shirin, dasturxon to'kin, kayfiyat a'lo bo'lsin!"
+            }, new Design[]{
+                    dz("Bahor", 0xFF7BD389, 0xFF2E8B6E, 2, D_FLOWERS, I_SUN, 0xFFFFE066, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Quyosh", 0xFFFFE066, 0xFFF6A54B, 1, D_RAYS, I_SUN, 0xFFD9822B, 0xFF5A2E05, 0, B_NONE),
+                    dz("Oq kartochka", 0xFF4FB28F, 0xFF4FB28F, 0, D_CARD, I_FLOWER, 0xFFE2557A, 0xFF1F5E47, 0, B_NONE),
+                    dz("Lola", 0xFFFFD9E4, 0xFFFFD9E4, 0, D_FLOWERS, I_FLOWER, 0xFFE2557A, 0xFFA02A55, 0, B_NONE),
+                    dz("Osmon", 0xFF5AA6E8, 0xFFBFE3FF, 2, D_CLOUDS, I_SUN, 0xFFF6A54B, 0xFF1D4F86, 0, B_NONE),
+                    dz("Yashil ramka", 0xFF14513E, 0xFF14513E, 0, D_FRAME, I_FLOWER, 0xFFF2D27A, 0xFFF2D27A, 1, B_NONE),
+                    dz("Konfetti", 0xFF1FA67A, 0xFF0E6B52, 1, D_CONFETTI, I_SUN, 0xFFFFE066, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Qog'oz", 0xFFF7EFE0, 0xFFF7EFE0, 0, D_NONE, I_FLOWER, 0xFF2E8B6E, 0xFF4A3A1A, 1, B_NONE),
+                    dz("Binafsha bahor", 0xFFE6DCF7, 0xFFE6DCF7, 0, D_FLOWERS, I_FLOWER, 0xFF8A5BD6, 0xFF4A2E8A, 0, B_NONE),
+                    dz("Tilla bahor", 0xFFF2D27A, 0xFFD9A02B, 1, D_RAYS, I_FLOWER, 0xFFC0492F, 0xFF4A2A05, 0, B_NONE)
+            }),
+            // ---------------- 8-mart ----------------
+            new Cat("8-mart", "8-mart bayrami muborak!", 0xFFE2557A, 0xFF8A5BD6, NAMES_FUN, new String[]{
+                    "Aziz {to}! Sizni Xalqaro xotin-qizlar kuni bilan chin qalbimdan tabriklayman. Doimo go'zal, baxtli va sevimli bo'ling. Uyingizda tinchlik, dilingizda iliqlik hukm sursin!",
+                    "Hurmatli {to}! Sizni 8-mart bayrami bilan samimiy tabriklaymiz. Sizga mustahkam sog'lik, oilaviy baxt va barcha ishlaringizda muvaffaqiyat tilaymiz.",
+                    "{to}, 8-mart bayramingiz muborak! Doim tabassum qiling!",
+                    "{to}, 8-mart muborak! Bugun siz dam oling, qolgan ishlarni biz hal qilamiz (ertagacha)!"
+            }, new Design[]{
+                    dz("Pushti", 0xFFF6A5C0, 0xFFE2557A, 1, D_HEARTS, I_FLOWER, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Lola", 0xFFFFD9E4, 0xFFFFD9E4, 0, D_FLOWERS, I_FLOWER, 0xFFE2557A, 0xFFA02A55, 0, B_NONE),
+                    dz("Oq kartochka", 0xFF8A5BD6, 0xFF8A5BD6, 0, D_CARD, I_HEART, 0xFFE2557A, 0xFF4A2E8A, 0, B_NONE),
+                    dz("Binafsha", 0xFF8A5BD6, 0xFF4A2E8A, 1, D_BUBBLES, I_FLOWER, 0xFFFFD9E4, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Tilla ramka", 0xFF3A1F4A, 0xFF3A1F4A, 0, D_FRAME, I_FLOWER, 0xFFE8C872, 0xFFE8C872, 1, B_NONE),
+                    dz("Yurak", 0xFFE2557A, 0xFFE2557A, 0, D_HEARTS, I_HEART, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Konfetti", 0xFFF6A54B, 0xFFE2557A, 1, D_CONFETTI, I_SPARKLE, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Sharlar", 0xFFFFF0F5, 0xFFFFF0F5, 0, D_BALLOONS, I_NONE, 0xFFA02A55, 0xFFA02A55, 0, B_NONE),
+                    dz("Neon", 0xFF0B0B12, 0xFF0B0B12, 0, D_NONE, I_HEART, 0xFFFF5FA8, 0xFFFF5FA8, 2, B_NONE),
+                    dz("Yumshoq", 0xFFE6DCF7, 0xFFFFD9E4, 1, D_FLOWERS, I_FLOWER, 0xFF8A5BD6, 0xFF4A2E8A, 1, B_NONE)
+            }),
+            // ---------------- Mustaqillik kuni ----------------
+            new Cat("Mustaqillik kuni", "Mustaqillik kuni muborak!", 0xFF1E9BD7, 0xFF1FA24A, NAMES_POEM, new String[]{
+                    "Aziz {to}! Sizni Mustaqillik kuni bilan chin qalbimdan tabriklayman. Yurtimiz tinch, osmonimiz musaffo, xalqimiz baxtli bo'lsin. Vatanimiz yanada gullab-yashnasin!",
+                    "Hurmatli {to}! Sizni O'zbekiston Respublikasining Mustaqillik kuni bilan samimiy tabriklaymiz. Yurtimizga tinchlik, xalqimizga farovonlik va yangi zafarlar tilaymiz.",
+                    "{to}, Mustaqillik kuningiz muborak! Vatanimiz abadiy bo'lsin!",
+                    "{to}, Vatanim, oltin beshigim,\nSenga baxt tilayman har onda.\nMustaqillik bayrami muborak,\nTinch bo'lsin yurt, olam jahonda!"
+            }, new Design[]{
+                    dz("Bayroq", 0xFF1E9BD7, 0xFF0A5F9E, 2, D_FLAGBAND, I_FLAG, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Oq kartochka", 0xFF1FA24A, 0xFF1FA24A, 0, D_CARD, I_FLAG, 0xFF1FA24A, 0xFF0F5A24, 0, B_NONE),
+                    dz("Tilla yulduzlar", 0xFF0A3A6B, 0xFF0A3A6B, 0, D_STARS, I_STAR, 0xFFF2D27A, 0xFFF2D27A, 1, B_NONE),
+                    dz("Salyut", 0xFF0A0A14, 0xFF0A0A14, 0, D_FIREWORKS, I_FLAG, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Oq", 0xFFF5F8FB, 0xFFF5F8FB, 0, D_FLAGBAND, I_STAR, 0xFF1E9BD7, 0xFF0A5F9E, 0, B_NONE),
+                    dz("Yashil", 0xFF14732F, 0xFF1FA24A, 1, D_CONFETTI, I_FLAG, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Ramka", 0xFF0A5F9E, 0xFF0A5F9E, 0, D_FRAME, I_STAR, 0xFFFFFFFF, 0xFFFFFFFF, 1, B_NONE),
+                    dz("Osmon", 0xFF5AA6E8, 0xFFBFE3FF, 2, D_CLOUDS, I_FLAG, 0xFFFFFFFF, 0xFF0A3A6B, 0, B_NONE),
+                    dz("Oltin", 0xFFF2C14E, 0xFFD9822B, 1, D_NONE, I_STAR, 0xFF0A3A6B, 0xFF0A3A6B, 0, B_NONE),
+                    dz("Qora", 0xFF0B0B12, 0xFF0B0B12, 0, D_STARS, I_FLAG, 0xFFFFFFFF, 0xFFFFFFFF, 2, B_NONE)
+            }),
+            // ---------------- O'qituvchi va murabbiylar kuni ----------------
+            new Cat("O'qituvchilar kuni", "O'qituvchilar kuni muborak!", 0xFFF6A54B, 0xFFC0492F, NAMES_POEM, new String[]{
+                    "Aziz {to}! Sizni O'qituvchi va murabbiylar kuni bilan chin qalbimdan tabriklayman. Bergan bilim va tarbiyangiz uchun chuqur minnatdorchilik bildiraman. Sizga sog'lik, sabr va ishlaringizda omad tilayman!",
+                    "Hurmatli {to}! Sizni O'qituvchi va murabbiylar kuni bilan samimiy tabriklaymiz. Mehnatingiz va fidoyiligingiz uchun katta rahmat. Sizga mustahkam sog'lik va yangi yutuqlar tilaymiz.",
+                    "{to}, O'qituvchi va murabbiylar kuni muborak! Sizga katta rahmat!",
+                    "{to}, Siz berdingiz bizga ilm nurini,\nKo'rsatdingiz haqiqat yo'lini.\nBayramingiz muborak bo'lsin,\nBaxt ila to'lsin har bir kuningiz!"
+            }, new Design[]{
+                    dz("Kitob", 0xFF2B7BD6, 0xFF1D4F86, 1, D_NONE, I_BOOK, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Oq kartochka", 0xFFF6A54B, 0xFFF6A54B, 0, D_CARD, I_BOOK, 0xFFC0492F, 0xFF5A2E05, 0, B_NONE),
+                    dz("Doska", 0xFF1F4E3A, 0xFF1F4E3A, 0, D_FRAME, I_BOOK, 0xFFFFFFFF, 0xFFFFFFFF, 1, B_NONE),
+                    dz("Gul", 0xFFFFD9E4, 0xFFFFD9E4, 0, D_FLOWERS, I_BOOK, 0xFFE2557A, 0xFFA02A55, 0, B_NONE),
+                    dz("Oltin", 0xFFF2C14E, 0xFFD9822B, 1, D_NONE, I_STAR, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
+                    dz("Konfetti", 0xFF8A5BD6, 0xFF4A2E8A, 1, D_CONFETTI, I_BOOK, 0xFFF2C14E, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Osmon", 0xFF5AA6E8, 0xFFBFE3FF, 2, D_CLOUDS, I_BOOK, 0xFF1D4F86, 0xFF1D4F86, 0, B_NONE),
+                    dz("Qog'oz", 0xFFF7EFE0, 0xFFF7EFE0, 0, D_FRAME, I_BOOK, 0xFF6B4423, 0xFF6B4423, 1, B_NONE),
+                    dz("Yashil", 0xFF2E8B6E, 0xFF2E8B6E, 0, D_CARD, I_STAR, 0xFF2E8B6E, 0xFF1F5E47, 0, B_NONE),
+                    dz("Tun", 0xFF10203A, 0xFF10203A, 0, D_STARS, I_BOOK, 0xFFE8C872, 0xFFE8C872, 0, B_NONE)
+            }),
+            // ---------------- Vatan himoyachilari kuni ----------------
+            new Cat("Vatan himoyachilari", "Vatan himoyachilari kuni muborak!", 0xFF3A4668, 0xFF14284B, NAMES_POEM, new String[]{
+                    "Aziz {to}! Sizni Vatan himoyachilari kuni bilan chin qalbimdan tabriklayman. Yurtimiz tinchligi va osoyishtaligi yo'lida ko'rsatgan jasoratingiz uchun rahmat. Sizga sog'lik va baxt tilayman!",
+                    "Hurmatli {to}! Sizni Vatan himoyachilari kuni bilan samimiy tabriklaymiz. Vatan xizmatidagi fidoyiligingiz uchun minnatdorchilik bildiramiz. Sizga mustahkam sog'lik va oilaviy baxt tilaymiz.",
+                    "{to}, Vatan himoyachilari kuningiz muborak! Sog' bo'ling!",
+                    "{to}, Vatan posbonlari yurtning tayanchi,\nSizlar bilan tinch bizning osmonimiz.\nBayramingiz muborak, baxtli bo'ling,\nDoim sog' bo'lsin jasur jonimiz!"
+            }, new Design[]{
+                    dz("Qalqon", 0xFF14284B, 0xFF14284B, 0, D_STARS, I_SHIELD, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Yashil", 0xFF14513E, 0xFF1F8A6A, 2, D_FRAME, I_SHIELD, 0xFFF2D27A, 0xFFF2D27A, 1, B_NONE),
+                    dz("Oq kartochka", 0xFF0A5F9E, 0xFF0A5F9E, 0, D_CARD, I_SHIELD, 0xFF0A5F9E, 0xFF0A3A6B, 0, B_NONE),
+                    dz("Tilla", 0xFFF2C14E, 0xFFD9822B, 1, D_NONE, I_SHIELD, 0xFF4A2A05, 0xFF4A2A05, 0, B_NONE),
+                    dz("Salyut", 0xFF0A0A14, 0xFF0A0A14, 0, D_FIREWORKS, I_STAR, 0xFFF2C14E, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Bayroq", 0xFF1E9BD7, 0xFF0A5F9E, 2, D_FLAGBAND, I_STAR, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Qora", 0xFF0B0B12, 0xFF0B0B12, 0, D_FRAME, I_SHIELD, 0xFFE8C872, 0xFFE8C872, 2, B_NONE),
+                    dz("Qishki", 0xFF0F2447, 0xFF2B5A9E, 2, D_SNOW, I_SHIELD, 0xFFFFFFFF, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Qizil", 0xFF8A1F1F, 0xFFC0392F, 1, D_STARS, I_STAR, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
+                    dz("Kulrang", 0xFF3A4668, 0xFF232C47, 1, D_NONE, I_SHIELD, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE)
+            }),
     };
-
-    public static final String[] TEMPLATE_NAMES = {"Samimiy", "Rasmiy", "Qisqa", "Hazil"};
-
-    public static final String[] CATEGORY_NAMES = {"Tug'ilgan kun", "Yangi yil"};
 
     private TabrikCards() {
     }
 
+    public static int categoryCount() {
+        return CATS.length;
+    }
+
+    public static String categoryName(int cat) {
+        return CATS[safe(cat)].name;
+    }
+
+    public static int[] categoryColors(int cat) {
+        return new int[]{CATS[safe(cat)].colorA, CATS[safe(cat)].colorB};
+    }
+
+    public static String[] templateNames(int cat) {
+        return CATS[safe(cat)].tplNames;
+    }
+
     public static Design[] designs(int cat) {
-        return cat == CAT_NEWYEAR ? NEWYEAR : BIRTHDAY;
+        return CATS[safe(cat)].designs;
     }
 
     public static String title(int cat) {
-        return TITLES[cat == CAT_NEWYEAR ? 1 : 0];
+        return CATS[safe(cat)].title;
+    }
+
+    private static int safe(int cat) {
+        return Math.max(0, Math.min(CATS.length - 1, cat));
     }
 
     /** Ready-made text with the name put in. */
     public static String template(int cat, int index, String name) {
-        String raw = BODIES[cat == CAT_NEWYEAR ? 1 : 0][Math.max(0, Math.min(3, index))];
+        String[] bodies = CATS[safe(cat)].bodies;
+        String raw = bodies[Math.max(0, Math.min(bodies.length - 1, index))];
         String n = name == null ? "" : name.trim();
         if (raw.startsWith("{to}")) {
             return (n.isEmpty() ? "Do'stim" : n) + raw.substring(4);
@@ -153,6 +299,7 @@ public final class TabrikCards {
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint LINE = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Path PATH = new Path();
+    private static final Path PATH2 = new Path();
     private static final RectF RECT = new RectF();
 
     /**
@@ -219,6 +366,8 @@ public final class TabrikCards {
         float bottomReserve = 30f;
         if (d.deco == D_BOTTOM) {
             bottomReserve = 66f;
+        } else if (d.deco == D_FLAGBAND) {
+            bottomReserve = 50f;
         } else if (d.deco == D_GROUND) {
             bottomReserve = 60f;
         }
@@ -437,6 +586,39 @@ public final class TabrikCards {
                 ring(c, 160, 370, 5, 0xFFFFFFFF, 2, s);
                 break;
             }
+            case D_FLOWERS: {
+                drawIcon(c, I_FLOWER, 36f * s, 46f * s, 28f * s, d.iconColor, s);
+                drawIcon(c, I_FLOWER, 268f * s, 66f * s, 22f * s, d.iconColor, s);
+                drawIcon(c, I_FLOWER, 40f * s, 352f * s, 24f * s, d.iconColor, s);
+                drawIcon(c, I_FLOWER, 262f * s, 344f * s, 30f * s, d.iconColor, s);
+                break;
+            }
+            case D_RAYS: {
+                LINE.setStyle(Paint.Style.STROKE);
+                LINE.setColor(0x66FFFFFF);
+                LINE.setStrokeWidth(4f * s);
+                for (int a = 20; a <= 160; a += 20) {
+                    double r = Math.toRadians(a);
+                    c.drawLine(150f * s, 0, 150f * s + (float) Math.cos(r) * 190f * s, (float) Math.sin(r) * 190f * s, LINE);
+                }
+                break;
+            }
+            case D_HEARTS: {
+                drawIcon(c, I_HEART, 34f * s, 44f * s, 24f * s, 0x66FFFFFF, s);
+                drawIcon(c, I_HEART, 266f * s, 70f * s, 18f * s, 0x66FFFFFF, s);
+                drawIcon(c, I_HEART, 44f * s, 350f * s, 20f * s, 0x66FFFFFF, s);
+                drawIcon(c, I_HEART, 258f * s, 340f * s, 28f * s, 0x66FFFFFF, s);
+                break;
+            }
+            case D_FLAGBAND: {
+                FILL.setColor(0xFF1EB4E8);
+                c.drawRect(0, h - 36f * s, w, h - 28f * s, FILL);
+                FILL.setColor(0xFFFFFFFF);
+                c.drawRect(0, h - 28f * s, w, h - 20f * s, FILL);
+                FILL.setColor(0xFF1EB53A);
+                c.drawRect(0, h - 20f * s, w, h - 12f * s, FILL);
+                break;
+            }
             default:
                 break;
         }
@@ -597,6 +779,76 @@ public final class TabrikCards {
                 c.drawCircle(ox + 12 * g, oy + 12 * g, 9.5f * g, LINE);
                 c.drawLine(ox + 12 * g, oy + 12 * g, ox + 12 * g, oy + 6.5f * g, LINE);
                 c.drawLine(ox + 12 * g, oy + 12 * g, ox + 16 * g, oy + 14.5f * g, LINE);
+                break;
+            case I_MOON:
+                PATH.reset();
+                PATH.addCircle(ox + 11f * g, oy + 12.5f * g, 8.5f * g, Path.Direction.CW);
+                PATH2.reset();
+                PATH2.addCircle(ox + 15.2f * g, oy + 9.8f * g, 7.2f * g, Path.Direction.CW);
+                PATH.op(PATH2, Path.Op.DIFFERENCE);
+                c.drawPath(PATH, FILL);
+                sparkle(c, ox + 19f * g, oy + 5f * g, 3f * g, color);
+                break;
+            case I_FLOWER:
+                for (int i = 0; i < 5; i++) {
+                    double a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+                    c.drawCircle(ox + 12 * g + (float) Math.cos(a) * 5.2f * g, oy + 12 * g + (float) Math.sin(a) * 5.2f * g, 3.8f * g, FILL);
+                }
+                FILL.setColor(0xFFFFE066);
+                c.drawCircle(ox + 12 * g, oy + 12 * g, 2.6f * g, FILL);
+                break;
+            case I_SUN:
+                c.drawCircle(ox + 12 * g, oy + 12 * g, 4.6f * g, FILL);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI / 4;
+                    c.drawLine(ox + 12 * g + (float) Math.cos(a) * 7.4f * g, oy + 12 * g + (float) Math.sin(a) * 7.4f * g,
+                            ox + 12 * g + (float) Math.cos(a) * 10.5f * g, oy + 12 * g + (float) Math.sin(a) * 10.5f * g, LINE);
+                }
+                break;
+            case I_HEART:
+                PATH.reset();
+                PATH.moveTo(ox + 12 * g, oy + 21 * g);
+                PATH.cubicTo(ox + 3 * g, oy + 14.5f * g, ox + 2.5f * g, oy + 8 * g, ox + 7 * g, oy + 6 * g);
+                PATH.cubicTo(ox + 9.5f * g, oy + 4.8f * g, ox + 11.5f * g, oy + 6.2f * g, ox + 12 * g, oy + 8 * g);
+                PATH.cubicTo(ox + 12.5f * g, oy + 6.2f * g, ox + 14.5f * g, oy + 4.8f * g, ox + 17 * g, oy + 6 * g);
+                PATH.cubicTo(ox + 21.5f * g, oy + 8 * g, ox + 21 * g, oy + 14.5f * g, ox + 12 * g, oy + 21 * g);
+                PATH.close();
+                c.drawPath(PATH, FILL);
+                break;
+            case I_BOOK:
+                PATH.reset();
+                PATH.moveTo(ox + 12 * g, oy + 6 * g);
+                PATH.lineTo(ox + 4 * g, oy + 4.5f * g);
+                PATH.lineTo(ox + 4 * g, oy + 18.5f * g);
+                PATH.lineTo(ox + 12 * g, oy + 20 * g);
+                PATH.close();
+                PATH.moveTo(ox + 12 * g, oy + 6 * g);
+                PATH.lineTo(ox + 20 * g, oy + 4.5f * g);
+                PATH.lineTo(ox + 20 * g, oy + 18.5f * g);
+                PATH.lineTo(ox + 12 * g, oy + 20 * g);
+                PATH.close();
+                c.drawPath(PATH, LINE);
+                break;
+            case I_FLAG:
+                c.drawLine(ox + 5 * g, oy + 3 * g, ox + 5 * g, oy + 22 * g, LINE);
+                FILL.setColor(0xFF1EB4E8);
+                c.drawRect(ox + 5 * g, oy + 4 * g, ox + 20 * g, oy + 7.4f * g, FILL);
+                FILL.setColor(0xFFFFFFFF);
+                c.drawRect(ox + 5 * g, oy + 7.4f * g, ox + 20 * g, oy + 10.8f * g, FILL);
+                FILL.setColor(0xFF1EB53A);
+                c.drawRect(ox + 5 * g, oy + 10.8f * g, ox + 20 * g, oy + 14.2f * g, FILL);
+                break;
+            case I_SHIELD:
+                PATH.reset();
+                PATH.moveTo(ox + 12 * g, oy + 2.5f * g);
+                PATH.lineTo(ox + 20 * g, oy + 5.5f * g);
+                PATH.lineTo(ox + 20 * g, oy + 12 * g);
+                PATH.cubicTo(ox + 20 * g, oy + 17 * g, ox + 16.5f * g, oy + 20 * g, ox + 12 * g, oy + 22 * g);
+                PATH.cubicTo(ox + 7.5f * g, oy + 20 * g, ox + 4 * g, oy + 17 * g, ox + 4 * g, oy + 12 * g);
+                PATH.lineTo(ox + 4 * g, oy + 5.5f * g);
+                PATH.close();
+                c.drawPath(PATH, LINE);
+                star(c, ox + 12 * g, oy + 12.4f * g, 4.8f * g, 2f * g, color);
                 break;
             default:
                 break;

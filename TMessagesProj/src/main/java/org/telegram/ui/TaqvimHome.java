@@ -226,7 +226,7 @@ public class TaqvimHome extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
         tabrikLp.topMargin = dp(12);
         root.addView(card(ctx, 5, t("Tabriklar", "Поздравления", "Greetings"),
-                t("Tug'ilgan kun, Yangi yil: chiroyli dizaynlar", "День рождения, Новый год: красивые дизайны", "Birthday, New Year: beautiful designs"), -1,
+                t("8 turkum, 80 ta chiroyli dizayn", "8 категорий, 80 красивых дизайнов", "8 categories, 80 beautiful designs"), -1,
                 0xFFE2557A, 0xFF8A5BD6, PAGE_TABRIK, true), tabrikLp);
     }
 
