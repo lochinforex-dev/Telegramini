@@ -58,6 +58,8 @@ public class TaqvimHisoblagich extends FrameLayout {
     private boolean error;
     private String lastHist = "";
     private final ArrayList<String[]> history = new ArrayList<>(); // {expression, result}
+    private LinearLayout column;
+    private LinearLayout homeRow;
 
     public TaqvimHisoblagich(BaseFragment fragment, Context context, int textColor, int accent, int cardColor) {
         super(context);
@@ -66,11 +68,41 @@ public class TaqvimHisoblagich extends FrameLayout {
         this.accent = accent;
         this.cardColor = cardColor;
 
-        LinearLayout column = new LinearLayout(context);
+        column = new LinearLayout(context);
         column.setOrientation(LinearLayout.VERTICAL);
-        column.setPadding(dp(16), dp(8), dp(16), dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 16));
+        applyBottomPadding();
         addView(column, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // "Bosh menyu" button: shown only when the page header does not already show one
+        homeRow = new LinearLayout(context);
+        homeRow.setOrientation(LinearLayout.HORIZONTAL);
+        homeRow.setGravity(Gravity.END);
+        TextView home = new TextView(context);
+        home.setText("\u2302  " + t("Bosh menyu", "Главное меню", "Home"));
+        home.setTextSize(14);
+        home.setTypeface(AndroidUtilities.bold());
+        home.setSingleLine(true);
+        home.setTextColor(0xFFFFFFFF);
+        home.setGravity(Gravity.CENTER);
+        home.setPadding(dp(16), dp(10), dp(16), dp(10));
+        android.graphics.drawable.GradientDrawable homeBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
+        homeBg.setCornerRadius(dp(20));
+        home.setBackground(homeBg);
+        home.setOnClickListener(v -> {
+            if (fragment instanceof CalendarTabActivity) {
+                ((CalendarTabActivity) fragment).openHome();
+            }
+        });
+        homeRow.addView(home, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        homeRow.setVisibility(GONE);
+        LinearLayout.LayoutParams homeLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        homeLp.bottomMargin = dp(8);
+        column.addView(homeRow, homeLp);
 
         column.addView(buildDisplay(context), new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
@@ -89,6 +121,34 @@ public class TaqvimHisoblagich extends FrameLayout {
             case "uz": return uz;
             case "ru": return ru;
             default:   return en;
+        }
+    }
+
+    /** The page reaches down behind the system buttons, so their height must be left free too. */
+    private void applyBottomPadding() {
+        column.setPadding(dp(16), dp(8), dp(16),
+                AndroidUtilities.navigationBarHeight + dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS + 12));
+    }
+
+    private void updateHomeButton() {
+        boolean inHeader = fragment instanceof CalendarTabActivity
+                && ((CalendarTabActivity) fragment).isHomeButtonInHeaderVisible();
+        homeRow.setVisibility(inHeader ? GONE : VISIBLE);
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        applyBottomPadding();
+        postDelayed(this::updateHomeButton, 250);
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (changedView == this && visibility == VISIBLE && column != null) {
+            applyBottomPadding();
+            postDelayed(this::updateHomeButton, 250);
         }
     }
 

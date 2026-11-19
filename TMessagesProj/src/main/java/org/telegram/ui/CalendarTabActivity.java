@@ -293,6 +293,17 @@ public class CalendarTabActivity extends BaseFragment {
         return fragmentView;
     }
 
+    /** Goes back to the Kundalik home page (used by the "Bosh menyu" buttons). */
+    public void openHome() {
+        selectPage(PAGE_HOME);
+    }
+
+    /** True when the "Bosh menyu" button of the page header is really on the screen. */
+    public boolean isHomeButtonInHeaderVisible() {
+        return headerBack != null && headerBack.getVisibility() == View.VISIBLE
+                && headerBack.isShown() && headerBack.getWidth() > 0;
+    }
+
     /** Reads the due dates of tasks and debts again (they may have changed on the other pages). */
     private void refreshMarks() {
         if (pageContext == null) {
