@@ -33,6 +33,7 @@ import androidx.core.graphics.ColorUtils;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 
@@ -69,6 +70,10 @@ public class TaqvimTabrik extends FrameLayout {
     private EditText bodyEdit;
     private final ArrayList<TextView> chips = new ArrayList<>();
     private final ArrayList<View> swatches = new ArrayList<>();
+    private final ArrayList<TextView> fxChips = new ArrayList<>();
+    private int fxIndex;
+    private TextView gifButton;
+    private boolean gifBusy;
 
     public TaqvimTabrik(BaseFragment fragment, Context context, int textColor, int accent, int cardColor) {
         super(context);
@@ -296,6 +301,29 @@ public class TaqvimTabrik extends FrameLayout {
         }
     }
 
+    private void updateFxChips() {
+        for (int i = 0; i < fxChips.size(); i++) {
+            TextView c = fxChips.get(i);
+            boolean on = i == fxIndex;
+            c.setBackground(Theme.createRoundRectDrawable(dp(16), on ? accent : cardColor));
+            c.setTextColor(on ? 0xFFFFFFFF : textColor);
+        }
+    }
+
+    private TextView sendButton(Context ctx, String text, int[] colors, View.OnClickListener l) {
+        TextView tv = new TextView(ctx);
+        tv.setText(text);
+        tv.setTextSize(15);
+        tv.setTypeface(AndroidUtilities.bold());
+        tv.setTextColor(0xFFFFFFFF);
+        tv.setGravity(Gravity.CENTER);
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
+        g.setCornerRadius(dp(26));
+        tv.setBackground(g);
+        tv.setOnClickListener(l);
+        return tv;
+    }
+
     private void updateSwatches() {
         for (int i = 0; i < swatches.size(); i++) {
             View v = swatches.get(i);
@@ -314,6 +342,8 @@ public class TaqvimTabrik extends FrameLayout {
         designIndex = index;
         tint = -1;
         tpl = 0;
+        fxIndex = TabrikGif.defaultEffect(cat);
+        fxChips.clear();
         toName = "";
         bodyEdited = false;
         chips.clear();
@@ -452,22 +482,51 @@ public class TaqvimTabrik extends FrameLayout {
         root.addView(swRow);
         updateSwatches();
 
-        // send
-        TextView send = new TextView(ctx);
-        send.setText(t("Chatga yuborish", "Отправить в чат", "Send to a chat"));
-        send.setTextSize(16);
-        send.setTypeface(AndroidUtilities.bold());
-        send.setTextColor(0xFFFFFFFF);
-        send.setGravity(Gravity.CENTER);
-        GradientDrawable sendBg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
-        sendBg.setCornerRadius(dp(26));
-        send.setBackground(sendBg);
-        send.setOnClickListener(v -> sendCard());
-        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        slp.topMargin = dp(20);
-        root.addView(send, slp);
+        // animation of the GIF
+        root.addView(label(t("GIF animatsiyasi", "Анимация GIF", "GIF animation")));
+        HorizontalScrollView fxScroll = new HorizontalScrollView(ctx);
+        fxScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout fxRow = new LinearLayout(ctx);
+        fxRow.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < TabrikGif.EFFECT_NAMES.length; i++) {
+            final int fi = i;
+            TextView chip = new TextView(ctx);
+            chip.setText(TabrikGif.EFFECT_NAMES[i]);
+            chip.setTextSize(14);
+            chip.setTypeface(AndroidUtilities.bold());
+            chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+            chip.setOnClickListener(v -> {
+                fxIndex = fi;
+                updateFxChips();
+            });
+            fxChips.add(chip);
+            LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            flp.rightMargin = dp(8);
+            fxRow.addView(chip, flp);
+        }
+        fxScroll.addView(fxRow);
+        root.addView(fxScroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        updateFxChips();
+
+        // send: picture or animated GIF
+        LinearLayout sendRow = new LinearLayout(ctx);
+        sendRow.setOrientation(LinearLayout.HORIZONTAL);
+        TextView imageBtn = sendButton(ctx, t("Rasm yuborish", "Отправить фото", "Send picture"),
+                new int[]{0xFF5B8DEF, 0xFF7C4DFF}, v -> sendCard());
+        gifButton = sendButton(ctx, t("GIF yuborish", "Отправить GIF", "Send GIF"),
+                new int[]{0xFFE2557A, 0xFFF6A54B}, v -> sendGif());
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        ilp.rightMargin = dp(6);
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        glp.leftMargin = dp(6);
+        sendRow.addView(imageBtn, ilp);
+        sendRow.addView(gifButton, glp);
+        LinearLayout.LayoutParams srlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        srlp.topMargin = dp(20);
+        root.addView(sendRow, srlp);
 
         updatePreview();
     }
@@ -501,20 +560,81 @@ public class TaqvimTabrik extends FrameLayout {
             out.close();
             bmp.recycle();
 
-            Uri uri = FileProvider.getUriForFile(ctx, ApplicationLoader.getApplicationId() + ".provider", file);
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("image/png");
-            intent.putExtra(Intent.EXTRA_STREAM, uri);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            Activity activity = fragment.getParentActivity();
-            if (activity == null) {
-                return;
-            }
-            activity.startActivity(Intent.createChooser(intent, t("Tabrikni yuborish", "Отправить поздравление", "Send greeting")));
+            shareFile(file, "image/png");
         } catch (Throwable e) {
             Toast.makeText(ctx, t("Rasm yaratilmadi", "Не удалось создать картинку", "Could not create the picture"),
                     Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void shareFile(File file, String mime) {
+        final Context ctx = getContext();
+        Uri uri = FileProvider.getUriForFile(ctx, ApplicationLoader.getApplicationId() + ".provider", file);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType(mime);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Activity activity = fragment.getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        activity.startActivity(Intent.createChooser(intent, t("Tabrikni yuborish", "Отправить поздравление", "Send greeting")));
+    }
+
+    /** Makes the animated GIF in the background and then opens the share window. */
+    private void sendGif() {
+        if (gifBusy) {
+            return;
+        }
+        gifBusy = true;
+        final String normal = t("GIF yuborish", "Отправить GIF", "Send GIF");
+        gifButton.setText(t("Tayyorlanmoqda...", "Готовим...", "Making..."));
+        final Context ctx = getContext();
+        final TabrikCards.Design design = TabrikCards.designs(cat)[designIndex];
+        final int tintValue = tint;
+        final String titleText = TabrikCards.title(cat);
+        final String body = bodyText;
+        final String sig = signature();
+        final int effect = fxIndex;
+        final File dir = new File(ctx.getFilesDir(), "cache");
+        Utilities.globalQueue.postRunnable(() -> {
+            File result = null;
+            try {
+                dir.mkdirs();
+                File[] old = dir.listFiles();
+                if (old != null) {
+                    for (File f : old) {
+                        if (f.getName().startsWith("tabrik_")
+                                && f.lastModified() < System.currentTimeMillis() - 24L * 60 * 60 * 1000) {
+                            f.delete();
+                        }
+                    }
+                }
+                File file = new File(dir, "tabrik_" + System.currentTimeMillis() + ".gif");
+                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect);
+                result = file;
+            } catch (Throwable ignore) {
+                result = null;
+            }
+            final File done = result;
+            AndroidUtilities.runOnUIThread(() -> {
+                gifBusy = false;
+                if (gifButton != null) {
+                    gifButton.setText(normal);
+                }
+                if (done == null) {
+                    Toast.makeText(ctx, t("GIF yaratilmadi", "Не удалось создать GIF", "Could not create the GIF"),
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    try {
+                        shareFile(done, "image/gif");
+                    } catch (Throwable e) {
+                        Toast.makeText(ctx, t("GIF yaratilmadi", "Не удалось создать GIF", "Could not create the GIF"),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        });
     }
 
     /* ---------------- card view ---------------- */

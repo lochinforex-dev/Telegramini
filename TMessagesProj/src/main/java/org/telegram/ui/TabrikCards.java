@@ -8,8 +8,11 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.text.Layout;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.style.ForegroundColorSpan;
 
 import androidx.core.graphics.ColorUtils;
 
@@ -308,6 +311,33 @@ public final class TabrikCards {
      * @param tint index in {@link #PALETTE} or -1 for the original colours
      */
     public static void draw(Canvas c, float w, float h, Design d, int tint, String title, String body, String sig) {
+        draw(c, w, h, d, tint, title, body, sig, -1, null);
+    }
+
+    /** Something drawn between the background and the text (falling confetti, snow, stars). */
+    public interface Overlay {
+        void draw(Canvas canvas, float w, float h);
+    }
+
+    private static CharSequence mask(String text, int visible) {
+        if (text == null) {
+            return "";
+        }
+        if (visible >= text.length()) {
+            return text;
+        }
+        SpannableString sp = new SpannableString(text);
+        sp.setSpan(new ForegroundColorSpan(0x00000000), Math.max(0, visible), text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return sp;
+    }
+
+    /**
+     * @param reveal how many letters of title + text + signature are shown (-1 = all). The layout
+     *               always uses the full text, so nothing jumps while the text appears.
+     * @param behind drawn after the background and before the text, may be null
+     */
+    public static void draw(Canvas c, float w, float h, Design d, int tint, String title, String body, String sig,
+                            int reveal, Overlay behind) {
         final float s = w / 300f;
         FILL.setStyle(Paint.Style.FILL);
         FILL.setShader(null);
@@ -344,6 +374,9 @@ public final class TabrikCards {
         }
 
         drawDecoration(c, w, h, s, d, textColor);
+        if (behind != null) {
+            behind.draw(c, w, h);
+        }
 
         // ---- text blocks
         final boolean upper = d.font == 2;
@@ -360,7 +393,13 @@ public final class TabrikCards {
             titlePaint.setTypeface(AndroidUtilities.bold());
             titlePaint.setTextSize(21f * s);
         }
-        StaticLayout titleLayout = layout(t, titlePaint, (int) textWidth);
+        final String bodyStr = body == null ? "" : body;
+        final String sigStr = sig == null ? "" : sig;
+        final int visTitle = reveal < 0 ? Integer.MAX_VALUE : Math.min(reveal, t.length());
+        final int visBody = reveal < 0 ? Integer.MAX_VALUE : Math.max(0, Math.min(reveal - t.length(), bodyStr.length()));
+        final int visSig = reveal < 0 ? Integer.MAX_VALUE
+                : Math.max(0, Math.min(reveal - t.length() - bodyStr.length(), sigStr.length()));
+        StaticLayout titleLayout = layout(mask(t, visTitle), titlePaint, (int) textWidth);
 
         final float regionTop = (d.deco == D_BALLOONS ? 100f : 30f) * s + cardPad;
         float bottomReserve = 30f;
@@ -390,14 +429,14 @@ public final class TabrikCards {
 
         final boolean hasBody = body != null && !body.trim().isEmpty();
         final boolean hasSig = sig != null && !sig.trim().isEmpty();
-        StaticLayout sigLayout = hasSig ? layout(sig, sigPaint, (int) textWidth) : null;
+        StaticLayout sigLayout = hasSig ? layout(mask(sigStr, visSig), sigPaint, (int) textWidth) : null;
         final float sigH = hasSig ? gap + sigLayout.getHeight() : 0f;
 
         StaticLayout bodyLayout = null;
         float total = 0;
         for (float size = 14f; size >= 7.5f; size -= 0.5f) {
             bodyPaint.setTextSize(size * s);
-            bodyLayout = hasBody ? layout(body, bodyPaint, (int) textWidth) : null;
+            bodyLayout = hasBody ? layout(mask(bodyStr, visBody), bodyPaint, (int) textWidth) : null;
             total = iconSize + iconGap + bigSize + bigGap + titleLayout.getHeight()
                     + (hasBody ? gap + bodyLayout.getHeight() : 0f) + sigH;
             if (total <= regionH) {
