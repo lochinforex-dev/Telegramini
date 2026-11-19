@@ -199,35 +199,101 @@ public class TaqvimHome extends FrameLayout {
 
         LinearLayout row1 = new LinearLayout(ctx);
         row1.setOrientation(LinearLayout.HORIZONTAL);
-        row1.addView(card(ctx, 0, t("Kalendar", "Календарь", "Calendar"),
-                t("Voqealar, sanalar", "События, даты", "Events, dates"), -1,
-                0xFFFF8A65, 0xFFF4511E, PAGE_CALENDAR, false), cell(true));
-        row1.addView(card(ctx, 1, t("Vazifalar", "Задачи", "Tasks"), tasksSub, tasksProgress,
-                0xFF2ECC8F, 0xFF14966A, PAGE_TASKS, false), cell(false));
+        row1.addView(tile(ctx, 0, t("Kalendar", "Календарь", "Calendar"),
+                t("Sanalar", "Даты", "Dates"), -1,
+                0xFFF9B39D, 0xFFF59A86, PAGE_CALENDAR), tileLp(0));
+        row1.addView(tile(ctx, 1, t("Vazifalar", "Задачи", "Tasks"), tasksSub, tasksProgress,
+                0xFF8FDCBB, 0xFF6CC9A4, PAGE_TASKS), tileLp(1));
+        row1.addView(tile(ctx, 3, t("Tasbeh", "Тасбих", "Tasbih"),
+                t("Bugun: ", "Сегодня: ", "Today: ") + tasbehToday, tasbehProgress,
+                0xFFECB04A, 0xFFD99A2E, PAGE_TASBEH), tileLp(2));
         addRow(row1);
 
         LinearLayout row2 = new LinearLayout(ctx);
         row2.setOrientation(LinearLayout.HORIZONTAL);
-        row2.addView(card(ctx, 2, t("Qarzlar", "Долги", "Debts"), debtsSub, -1,
-                0xFFFF6B81, 0xFFD6336C, PAGE_DEBTS, false), cell(true));
-        row2.addView(card(ctx, 3, t("Tasbeh", "Тасбих", "Tasbih"),
-                t("Bugun: ", "Сегодня: ", "Today: ") + tasbehToday, tasbehProgress,
-                0xFFFFB74D, 0xFFF08C00, PAGE_TASBEH, false), cell(false));
+        row2.addView(tile(ctx, 2, t("Qarzlar", "Долги", "Debts"), debtsSub, -1,
+                0xFFEC7D8F, 0xFFD95C72, PAGE_DEBTS), tileLp(0));
+        row2.addView(tile(ctx, 4, t("Hisoblagich", "Калькулятор", "Calculator"),
+                t("Mingliklar bilan", "С разрядами", "Digit groups"), -1,
+                0xFF3A4668, 0xFF232C47, PAGE_CALC), tileLp(1));
+        row2.addView(tile(ctx, 5, t("Tabriklar", "Поздравления", "Greetings"),
+                t("8 turkum", "8 категорий", "8 categories"), -1,
+                0xFFB078E0, 0xFF8A5BD6, PAGE_TABRIK), tileLp(2));
         addRow(row2);
 
-        LinearLayout.LayoutParams wideLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
-        wideLp.topMargin = dp(12);
-        root.addView(card(ctx, 4, t("Hisoblagich", "Калькулятор", "Calculator"),
-                t("Mingliklar bilan, qarzga yozish", "С разрядами, запись в долги", "With digit groups, add to debts"), -1,
-                0xFF3A4668, 0xFF232C47, PAGE_CALC, true), wideLp);
+        // ad card (hidden when there are no ads)
+        LinearLayout.LayoutParams adLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        adLp.topMargin = dp(14);
+        root.addView(new org.telegram.ui.Cells.AdCardCell(ctx, cardColor, textColor), adLp);
+    }
 
-        LinearLayout.LayoutParams tabrikLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
-        tabrikLp.topMargin = dp(12);
-        root.addView(card(ctx, 5, t("Tabriklar", "Поздравления", "Greetings"),
-                t("8 turkum, 80 ta chiroyli dizayn", "8 категорий, 80 красивых дизайнов", "8 categories, 80 beautiful designs"), -1,
-                0xFFE2557A, 0xFF8A5BD6, PAGE_TABRIK, true), tabrikLp);
+    private LinearLayout.LayoutParams tileLp(int column) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(132), 1f);
+        lp.leftMargin = column == 0 ? 0 : dp(4);
+        lp.rightMargin = column == 2 ? 0 : dp(4);
+        return lp;
+    }
+
+    /** A compact rounded tile for the 3-column grid. */
+    private View tile(Context ctx, int iconType, String title, String sub, float progress,
+                      int colorA, int colorB, final int page) {
+        LinearLayout tile = new LinearLayout(ctx);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(10), dp(10), dp(10), dp(10));
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{colorA, colorB});
+        bg.setCornerRadius(dp(20));
+        tile.setBackground(bg);
+
+        FrameLayout iconBox = new FrameLayout(ctx);
+        GradientDrawable iconBg = new GradientDrawable();
+        iconBg.setColor(0x38FFFFFF);
+        iconBg.setCornerRadius(dp(12));
+        iconBox.setBackground(iconBg);
+        iconBox.addView(new IconView(ctx, iconType), new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
+        tile.addView(iconBox, new LinearLayout.LayoutParams(dp(38), dp(38)));
+
+        LinearLayout texts = new LinearLayout(ctx);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setGravity(Gravity.BOTTOM);
+
+        TextView titleView = new TextView(ctx);
+        titleView.setText(title);
+        titleView.setTextSize(14f);
+        titleView.setTypeface(AndroidUtilities.bold());
+        titleView.setTextColor(0xFFFFFFFF);
+        titleView.setSingleLine(true);
+        titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(titleView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView subView = new TextView(ctx);
+        subView.setText(sub);
+        subView.setTextSize(11f);
+        subView.setTextColor(0xE6FFFFFF);
+        subView.setMaxLines(2);
+        subView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(subView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        if (progress >= 0) {
+            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(4));
+            barLp.topMargin = dp(6);
+            texts.addView(new ProgressBar(ctx, progress, 0xFFFFFFFF), barLp);
+        }
+
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        tlp.topMargin = dp(6);
+        tile.addView(texts, tlp);
+
+        tile.setOnClickListener(v -> {
+            if (opener != null) {
+                opener.open(page);
+            }
+        });
+        return tile;
     }
 
     private LinearLayout.LayoutParams cell(boolean left) {
@@ -253,9 +319,10 @@ public class TaqvimHome extends FrameLayout {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(20), dp(16), dp(20), dp(16));
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF5B8DEF, 0xFF7C4DFF});
-        bg.setCornerRadius(dp(26));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(cardColor);
+        bg.setStroke(dp(1), ColorUtils.setAlphaComponent(textColor, 28));
+        bg.setCornerRadius(dp(22));
         card.setBackground(bg);
 
         Locale locale = LocaleController.getInstance().getCurrentLocale();
@@ -267,16 +334,16 @@ public class TaqvimHome extends FrameLayout {
         TextView label = new TextView(ctx);
         label.setText(t("Bugun", "Сегодня", "Today"));
         label.setTextSize(14);
-        label.setTextColor(0xE6FFFFFF);
+        label.setTextColor(ColorUtils.setAlphaComponent(textColor, 190));
         top.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView weekday = new TextView(ctx);
         String wd = new SimpleDateFormat("EEEE", locale).format(now.getTime());
         weekday.setText(wd.isEmpty() ? wd : wd.substring(0, 1).toUpperCase(locale) + wd.substring(1));
         weekday.setTextSize(12);
-        weekday.setTextColor(0xFFFFFFFF);
+        weekday.setTextColor(ColorUtils.setAlphaComponent(textColor, 210));
         weekday.setPadding(dp(10), dp(3), dp(10), dp(3));
         GradientDrawable pill = new GradientDrawable();
-        pill.setColor(0x38FFFFFF);
+        pill.setColor(ColorUtils.setAlphaComponent(textColor, 28));
         pill.setCornerRadius(dp(12));
         weekday.setBackground(pill);
         top.addView(weekday, new LinearLayout.LayoutParams(
@@ -287,9 +354,9 @@ public class TaqvimHome extends FrameLayout {
         TextView date = new TextView(ctx);
         String ds = new SimpleDateFormat("d-MMMM", locale).format(now.getTime());
         date.setText(ds);
-        date.setTextSize(36);
-        date.setTypeface(AndroidUtilities.bold());
-        date.setTextColor(0xFFFFFFFF);
+        date.setTextSize(34);
+        date.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
+        date.setTextColor(textColor);
         LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dateLp.topMargin = dp(2);
@@ -312,10 +379,10 @@ public class TaqvimHome extends FrameLayout {
         tv.setText(text);
         tv.setTextSize(12);
         tv.setSingleLine(true);
-        tv.setTextColor(0xFFFFFFFF);
+        tv.setTextColor(textColor);
         tv.setPadding(dp(10), dp(5), dp(10), dp(5));
         GradientDrawable g = new GradientDrawable();
-        g.setColor(0x33FFFFFF);
+        g.setColor(ColorUtils.setAlphaComponent(textColor, 24));
         g.setCornerRadius(dp(12));
         tv.setBackground(g);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
