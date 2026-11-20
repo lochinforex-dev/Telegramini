@@ -34,6 +34,7 @@ import androidx.core.graphics.ColorUtils;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.UserConfig;
@@ -590,6 +591,11 @@ public class TaqvimTabrik extends FrameLayout {
      * (The system share window would turn it into a still picture.)
      */
     private void chooseChatAndSend(final File file) {
+        if (AndroidUtilities.isInternalUri(Uri.fromFile(file))) {
+            // the file is in a protected folder: the chat list would refuse it, so use the share window
+            shareFile(file, "image/gif");
+            return;
+        }
         Bundle args = new Bundle();
         args.putBoolean("onlySelect", true);
         args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
@@ -622,7 +628,20 @@ public class TaqvimTabrik extends FrameLayout {
         final String body = bodyText;
         final String sig = signature();
         final int effect = fxIndex;
-        final File dir = new File(ctx.getFilesDir(), "cache");
+        // The GIF must NOT be inside the app's private folder (/data/data/...): Telegram refuses to send
+        // such files, so it is kept in the cache folder on the external storage.
+        File cacheDir = null;
+        try {
+            cacheDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
+        } catch (Throwable ignore) {
+        }
+        if (cacheDir == null) {
+            cacheDir = ctx.getExternalCacheDir();
+        }
+        if (cacheDir == null) {
+            cacheDir = new File(ctx.getFilesDir(), "cache");
+        }
+        final File dir = cacheDir;
         Utilities.globalQueue.postRunnable(() -> {
             File result = null;
             try {
