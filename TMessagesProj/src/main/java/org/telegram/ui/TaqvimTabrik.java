@@ -12,6 +12,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -31,8 +32,11 @@ import androidx.core.content.FileProvider;
 import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.SendMessagesHelper;
+import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -581,7 +585,29 @@ public class TaqvimTabrik extends FrameLayout {
         activity.startActivity(Intent.createChooser(intent, t("Tabrikni yuborish", "Отправить поздравление", "Send greeting")));
     }
 
-    /** Makes the animated GIF in the background and then opens the share window. */
+    /**
+     * Lets the person choose a chat and sends the GIF there as a real animation.
+     * (The system share window would turn it into a still picture.)
+     */
+    private void chooseChatAndSend(final File file) {
+        Bundle args = new Bundle();
+        args.putBoolean("onlySelect", true);
+        args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
+        DialogsActivity picker = new DialogsActivity(args);
+        picker.setDelegate((f, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+            final AccountInstance account = AccountInstance.getInstance(UserConfig.selectedAccount);
+            for (int i = 0; i < dids.size(); i++) {
+                SendMessagesHelper.prepareSendingDocument(account, file.getAbsolutePath(), file.getAbsolutePath(), null,
+                        null, "image/gif", dids.get(i).dialogId, null, null, null, null, null, notify, scheduleDate,
+                        null, null, false);
+            }
+            f.finishFragment();
+            return true;
+        });
+        fragment.presentFragment(picker);
+    }
+
+    /** Makes the animated GIF in the background and then lets the person choose a chat. */
     private void sendGif() {
         if (gifBusy) {
             return;
@@ -627,7 +653,7 @@ public class TaqvimTabrik extends FrameLayout {
                             Toast.LENGTH_SHORT).show();
                 } else {
                     try {
-                        shareFile(done, "image/gif");
+                        chooseChatAndSend(done);
                     } catch (Throwable e) {
                         Toast.makeText(ctx, t("GIF yaratilmadi", "Не удалось создать GIF", "Could not create the GIF"),
                                 Toast.LENGTH_SHORT).show();
