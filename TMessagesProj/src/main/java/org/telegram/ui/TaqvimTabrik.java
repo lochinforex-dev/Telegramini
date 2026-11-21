@@ -657,7 +657,17 @@ public class TaqvimTabrik extends FrameLayout {
                     }
                 }
                 File file = new File(dir, "tabrik_" + System.currentTimeMillis() + ".gif");
-                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect);
+                final int[] lastShown = {-1};
+                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect, percent -> {
+                    if (percent - lastShown[0] >= 4 || percent >= 100) {
+                        lastShown[0] = percent;
+                        AndroidUtilities.runOnUIThread(() -> {
+                            if (gifBusy && gifButton != null) {
+                                gifButton.setText(t("Tayyorlanmoqda... ", "Готовим... ", "Making... ") + percent + "%");
+                            }
+                        });
+                    }
+                });
                 result = file;
             } catch (Throwable ignore) {
                 result = null;

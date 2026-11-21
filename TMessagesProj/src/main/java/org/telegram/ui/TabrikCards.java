@@ -380,6 +380,16 @@ public final class TabrikCards {
     /** @param time position in the animation loop, 0..1 (only rich scenes move) */
     public static void draw(Canvas c, float w, float h, Design d, int tint, String title, String body, String sig,
                             int reveal, Overlay behind, float time) {
+        draw(c, w, h, d, tint, title, body, sig, reveal, behind, time, 0f);
+    }
+
+    /**
+     * @param forcedBodySize text size to use (card units); 0 = find the best size. An animation can ask once
+     *                       and then pass the answer back, which saves a lot of time on every frame.
+     * @return the body text size that was used
+     */
+    public static float draw(Canvas c, float w, float h, Design d, int tint, String title, String body, String sig,
+                             int reveal, Overlay behind, float time, float forcedBodySize) {
         final float s = w / 300f;
         FILL.setStyle(Paint.Style.FILL);
         FILL.setShader(null);
@@ -479,7 +489,11 @@ public final class TabrikCards {
 
         StaticLayout bodyLayout = null;
         float total = 0;
-        for (float size = 14f; size >= 7.5f; size -= 0.5f) {
+        float usedSize = 14f;
+        final float startSize = forcedBodySize > 0 ? forcedBodySize : 14f;
+        final float minSize = forcedBodySize > 0 ? forcedBodySize : 7.5f;
+        for (float size = startSize; size >= minSize - 0.001f; size -= 0.5f) {
+            usedSize = size;
             bodyPaint.setTextSize(size * s);
             bodyLayout = hasBody ? layout(mask(bodyStr, visBody), bodyPaint, (int) textWidth) : null;
             total = iconSize + iconGap + bigSize + bigGap + titleLayout.getHeight()
@@ -535,6 +549,7 @@ public final class TabrikCards {
             y += gap;
             drawLayout(c, sigLayout, cx - textWidth / 2f, y);
         }
+        return usedSize;
     }
 
     private static StaticLayout layout(CharSequence text, TextPaint paint, int width) {

@@ -37,6 +37,9 @@ public final class TabrikGif {
 
     private static final int TRANSPARENT = 255;
 
+    /** How long (in hundredths of a second) the finished card stays before the text is written again. */
+    public static final int PAUSE_CS = 1500; // 15 seconds
+
     private TabrikGif() {
     }
 
@@ -137,7 +140,7 @@ public final class TabrikGif {
         final int total = t.length() + b.length() + s.length();
         final ArrayList<Integer> ends = new ArrayList<>();
         if (mode == 0) {
-            int step = Math.max(1, (int) Math.ceil(total / 42.0));
+            int step = Math.max(1, (int) Math.ceil(total / 32.0));
             for (int v = step; v < total; v += step) {
                 ends.add(v);
             }
@@ -180,10 +183,10 @@ public final class TabrikGif {
         if (clean.isEmpty() || clean.get(clean.size() - 1) != total) {
             clean.add(total);
         }
-        if (clean.size() > 56) {
+        if (clean.size() > 44) {
             ArrayList<Integer> merged = new ArrayList<>();
-            double stepF = clean.size() / 56.0;
-            for (int i = 0; i < 56; i++) {
+            double stepF = clean.size() / 44.0;
+            for (int i = 0; i < 44; i++) {
                 merged.add(clean.get(Math.min(clean.size() - 1, (int) Math.round((i + 1) * stepF) - 1)));
             }
             clean = merged;
@@ -198,9 +201,19 @@ public final class TabrikGif {
         return out;
     }
 
-    /** Creates the GIF file. Takes a few seconds, so call it from a background thread. */
+    /** Reports how far the GIF is (0..100) while it is being made. */
+    public interface Progress {
+        void onProgress(int percent);
+    }
+
     public static void create(File outFile, TabrikCards.Design design, int tint, String title, String body,
                               String sig, int effect) throws IOException {
+        create(outFile, design, tint, title, body, sig, effect, null);
+    }
+
+    /** Creates the GIF file. Takes a few seconds, so call it from a background thread. */
+    public static void create(File outFile, TabrikCards.Design design, int tint, String title, String body,
+                              String sig, int effect, Progress progress) throws IOException {
         final int mode = MODE[Math.max(0, Math.min(MODE.length - 1, effect))];
         final int fx = FX[Math.max(0, Math.min(FX.length - 1, effect))];
         final String t = title == null ? "" : title;
@@ -221,8 +234,12 @@ public final class TabrikGif {
                 delay[f] = 8;
             }
         }
+        // The finished card rests for 15 seconds before the text is written again.
+        // With moving backgrounds, the last frames (about 2.4 s) still move and the last frame is held.
         if (fx == 0) {
-            delay[frames - 1] = 250; // let the finished card rest before it starts again
+            delay[frames - 1] = PAUSE_CS;
+        } else {
+            delay[frames - 1] = Math.max(8, PAUSE_CS - (frames - 1 - k) * 8);
         }
 
         final int bgColor = tint >= 0 && tint < TabrikCards.PALETTE.length ? TabrikCards.PALETTE[tint][0] : design.c1;
@@ -236,8 +253,13 @@ public final class TabrikGif {
         // ---- one palette for the whole animation, taken from three sample frames
         final int[] hist = new int[1 << 18];
         final int[] samples = {0, Math.min(frames - 1, k / 2 + 1), frames - 1};
+        float bodySize = 0f; // the same for every frame, so it is searched only once
         for (int sf : samples) {
-            renderFrame(canvas, design, tint, t, b, s, reveal[sf], fx, particles, sf, frames, lightBg);
+            final float used = renderFrame(canvas, design, tint, t, b, s, reveal[sf], fx, particles, sf, frames,
+                    lightBg, bodySize);
+            if (bodySize <= 0) {
+                bodySize = used;
+            }
             bmp.getPixels(px, 0, W, 0, 0, W, H);
             for (int y = 0; y < H; y += 2) {
                 for (int x = 0; x < W; x += 2) {
@@ -247,7 +269,20 @@ public final class TabrikGif {
         }
         final byte[] palette = new byte[256 * 3];
         final int paletteSize = buildPalette(hist, palette);
-        final byte[] lut = buildLut(palette, paletteSize);
+        // closest palette colour is looked up only for the colours that really appear
+        final byte[] lut = new byte[1 << 18];
+        Arrays.fill(lut, (byte) -1);
+        final int[] pr = new int[paletteSize];
+        final int[] pg = new int[paletteSize];
+        final int[] pb = new int[paletteSize];
+        for (int i = 0; i < paletteSize; i++) {
+            pr[i] = palette[i * 3] & 0xFF;
+            pg[i] = palette[i * 3 + 1] & 0xFF;
+            pb[i] = palette[i * 3 + 2] & 0xFF;
+        }
+        if (progress != null) {
+            progress.onProgress(8);
+        }
 
         // ---- write the GIF
         final OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile), 1 << 16);
@@ -274,10 +309,16 @@ public final class TabrikGif {
             final Lzw lzw = new Lzw();
 
             for (int f = 0; f < frames; f++) {
-                renderFrame(canvas, design, tint, t, b, s, reveal[f], fx, particles, f, frames, lightBg);
+                renderFrame(canvas, design, tint, t, b, s, reveal[f], fx, particles, f, frames, lightBg, bodySize);
                 bmp.getPixels(px, 0, W, 0, 0, W, H);
                 for (int i = 0; i < W * H; i++) {
-                    cur[i] = lut[key(px[i])];
+                    final int kk = key(px[i]);
+                    byte v = lut[kk];
+                    if (v == -1) {
+                        v = nearest(kk, pr, pg, pb, paletteSize);
+                        lut[kk] = v;
+                    }
+                    cur[i] = v;
                 }
 
                 int minX = 0, minY = 0, maxX = W - 1, maxY = H - 1;
@@ -338,6 +379,9 @@ public final class TabrikGif {
                 out.write(8);
                 lzw.encode(sub, sub.length, out);
                 out.write(0x00);
+                if (progress != null) {
+                    progress.onProgress(8 + (f + 1) * 92 / frames);
+                }
             }
             out.write(0x3B);
         } finally {
@@ -346,9 +390,9 @@ public final class TabrikGif {
         }
     }
 
-    private static void renderFrame(Canvas canvas, TabrikCards.Design d, int tint, String t, String b, String s,
-                                    int reveal, final int fx, final P[] particles, int frame, int frames,
-                                    final boolean lightBg) {
+    private static float renderFrame(Canvas canvas, TabrikCards.Design d, int tint, String t, String b, String s,
+                                     int reveal, final int fx, final P[] particles, int frame, int frames,
+                                     final boolean lightBg, float bodySize) {
         final float time = frame / (float) frames;
         TabrikCards.Overlay overlay = fx == 0 ? null : new TabrikCards.Overlay() {
             @Override
@@ -356,7 +400,7 @@ public final class TabrikGif {
                 drawParticles(c, fx, particles, time, lightBg);
             }
         };
-        TabrikCards.draw(canvas, W, H, d, tint, t, b, s, reveal, overlay, time);
+        return TabrikCards.draw(canvas, W, H, d, tint, t, b, s, reveal, overlay, time, bodySize);
     }
 
     /* ---------------- colours ---------------- */
@@ -484,39 +528,27 @@ public final class TabrikGif {
         return boxes.size();
     }
 
-    /** For every 6-bit colour: the closest palette entry. */
-    private static byte[] buildLut(byte[] palette, int size) {
-        final byte[] lut = new byte[1 << 18];
-        final int[] pr = new int[size];
-        final int[] pg = new int[size];
-        final int[] pb = new int[size];
+    /** The palette entry closest to a 6-bit colour. */
+    private static byte nearest(int kk, int[] pr, int[] pg, int[] pb, int size) {
+        final int r = expand6((kk >> 12) & 63);
+        final int g = expand6((kk >> 6) & 63);
+        final int bl = expand6(kk & 63);
+        int bestI = 0;
+        int bestD = Integer.MAX_VALUE;
         for (int i = 0; i < size; i++) {
-            pr[i] = palette[i * 3] & 0xFF;
-            pg[i] = palette[i * 3 + 1] & 0xFF;
-            pb[i] = palette[i * 3 + 2] & 0xFF;
-        }
-        for (int kk = 0; kk < (1 << 18); kk++) {
-            final int r = expand6((kk >> 12) & 63);
-            final int g = expand6((kk >> 6) & 63);
-            final int bl = expand6(kk & 63);
-            int bestI = 0;
-            int bestD = Integer.MAX_VALUE;
-            for (int i = 0; i < size; i++) {
-                final int dr = r - pr[i];
-                final int dg = g - pg[i];
-                final int db = bl - pb[i];
-                final int dist = dr * dr + dg * dg + db * db;
-                if (dist < bestD) {
-                    bestD = dist;
-                    bestI = i;
-                    if (dist == 0) {
-                        break;
-                    }
+            final int dr = r - pr[i];
+            final int dg = g - pg[i];
+            final int db = bl - pb[i];
+            final int dist = dr * dr + dg * dg + db * db;
+            if (dist < bestD) {
+                bestD = dist;
+                bestI = i;
+                if (dist == 0) {
+                    break;
                 }
             }
-            lut[kk] = (byte) bestI;
         }
-        return lut;
+        return (byte) bestI;
     }
 
     /* ---------------- GIF writing ---------------- */
