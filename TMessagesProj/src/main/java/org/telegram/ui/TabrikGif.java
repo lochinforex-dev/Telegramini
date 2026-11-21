@@ -356,7 +356,7 @@ public final class TabrikGif {
                 drawParticles(c, fx, particles, time, lightBg);
             }
         };
-        TabrikCards.draw(canvas, W, H, d, tint, t, b, s, reveal, overlay);
+        TabrikCards.draw(canvas, W, H, d, tint, t, b, s, reveal, overlay, time);
     }
 
     /* ---------------- colours ---------------- */

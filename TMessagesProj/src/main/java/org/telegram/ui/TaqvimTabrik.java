@@ -181,7 +181,8 @@ public class TaqvimTabrik extends FrameLayout {
             title.setTextColor(0xFFFFFFFF);
             texts.addView(title);
             TextView sub = new TextView(ctx);
-            sub.setText(t("10 ta dizayn", "10 дизайнов", "10 designs"));
+            final int count = TabrikCards.designs(i).length;
+            sub.setText(t(count + " ta dizayn", count + " дизайнов", count + " designs"));
             sub.setTextSize(13);
             sub.setTextColor(0xD9FFFFFF);
             texts.addView(sub);
