@@ -241,6 +241,10 @@ public class PrivateChatUi {
     }
 
     public static void onLayoutPause(BaseFragment topFragment) {
+        if (org.telegram.messenger.AdMobHelper.isAdScreenActive()) {
+            // Google's full-screen video is opening: this is not the user leaving the app
+            return;
+        }
         if (isProtectedFragment(topFragment)) {
             pausedWhileProtected = true;
         }
