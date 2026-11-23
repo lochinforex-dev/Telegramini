@@ -1948,6 +1948,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             org.telegram.messenger.AdBannerController.getInstance().whenReady(() -> {
                 if (!org.telegram.messenger.AdBannerController.getInstance().hasAds() && parentFragment != null && parentFragment.getParentActivity() != null) {
                     org.telegram.messenger.AdMobHelper.preloadStrip(parentFragment.getParentActivity(), adsLoadedListener);
+                    org.telegram.messenger.AdMobHelper.preloadRewarded(parentFragment.getParentActivity());
                 }
             }, 3000);
         }
