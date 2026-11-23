@@ -16,7 +16,9 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import com.google.android.gms.ads.AdView;
 import org.telegram.messenger.AdBannerController;
+import org.telegram.messenger.AdMobHelper;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.Theme;
@@ -42,6 +44,8 @@ public class AdStripCell extends FrameLayout {
     private final ImageView imageView;
     private final TextView imageLabel;
     private boolean imageMode;
+    private AdView admobView;
+    private boolean admobMode;
 
     private final TextView labelView;
     private final TextView textView;
@@ -114,6 +118,9 @@ public class AdStripCell extends FrameLayout {
      */
     @Override
     public boolean onTouchEvent(android.view.MotionEvent event) {
+        if (admobMode) {
+            return super.onTouchEvent(event);
+        }
         switch (event.getActionMasked()) {
             case android.view.MotionEvent.ACTION_DOWN:
                 downX = event.getX();
@@ -142,12 +149,18 @@ public class AdStripCell extends FrameLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(imageMode ? IMAGE_HEIGHT_DP : HEIGHT_DP), MeasureSpec.EXACTLY));
+        int heightDp = admobMode ? AdMobHelper.stripHeightDp() : (imageMode ? IMAGE_HEIGHT_DP : HEIGHT_DP);
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(heightDp), MeasureSpec.EXACTLY));
     }
 
     /** Re-reads the ads and starts showing them from the first one. */
     public void update() {
         ads = AdBannerController.getInstance().getAds();
+        if (ads.isEmpty() && AdMobHelper.isStripLoaded()) {
+            setAdMobMode(true);
+            return;
+        }
+        setAdMobMode(false);
         if (index >= ads.size()) {
             index = 0;
         }
@@ -157,6 +170,35 @@ public class AdStripCell extends FrameLayout {
         AndroidUtilities.cancelRunOnUIThread(rotateRunnable);
         if (attached && ads.size() > 1) {
             AndroidUtilities.runOnUIThread(rotateRunnable, ROTATE_DELAY);
+        }
+    }
+
+    /** No own ads: the cell shows the shared Google banner (labelled by Google itself) instead of the text strip. */
+    private void setAdMobMode(boolean on) {
+        if (on) {
+            AdView view = AdMobHelper.takeStripView();
+            if (view == null) {
+                on = false;
+            } else {
+                admobView = view;
+                addView(view, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+                view.resume();
+            }
+        }
+        if (!on && admobView != null) {
+            if (admobView.getParent() == this) {
+                removeView(admobView);
+            }
+            admobView = null;
+        }
+        if (admobMode != on) {
+            admobMode = on;
+            labelView.setVisibility(on ? GONE : VISIBLE);
+            textView.setVisibility(on ? GONE : VISIBLE);
+            imageView.setVisibility(GONE);
+            imageLabel.setVisibility(GONE);
+            imageMode = false;
+            requestLayout();
         }
     }
 
@@ -279,6 +321,11 @@ public class AdStripCell extends FrameLayout {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         attached = false;
+        if (admobView != null && admobView.getParent() == this) {
+            removeView(admobView);
+        }
+        admobView = null;
+        admobMode = false;
         AndroidUtilities.cancelRunOnUIThread(rotateRunnable);
         textView.animate().cancel();
     }
