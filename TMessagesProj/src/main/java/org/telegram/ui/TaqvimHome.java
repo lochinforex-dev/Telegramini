@@ -51,6 +51,7 @@ public class TaqvimHome extends FrameLayout {
     private final int cardColor;
     private final Opener opener;
     private final LinearLayout root;
+    private org.telegram.ui.Cells.AdCardCell adCard; // kept between refreshes, so the ad is not requested again every time
 
     public TaqvimHome(Context context, int textColor, int accent, int cardColor, Opener opener) {
         super(context);
@@ -225,7 +226,10 @@ public class TaqvimHome extends FrameLayout {
         LinearLayout.LayoutParams adLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         adLp.topMargin = dp(14);
-        root.addView(new org.telegram.ui.Cells.AdCardCell(ctx, cardColor, textColor), adLp);
+        if (adCard == null) {
+            adCard = new org.telegram.ui.Cells.AdCardCell(ctx, cardColor, textColor);
+        }
+        root.addView(adCard, adLp);
     }
 
     private LinearLayout.LayoutParams tileLp(int column) {
