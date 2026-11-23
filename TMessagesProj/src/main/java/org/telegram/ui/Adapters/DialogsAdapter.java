@@ -1577,7 +1577,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                     } else  if (itemInternals.get(i).viewType == VIEW_TYPE_FLICKER) {
                         dialogsHeight += cellHeight;
                     } else if (itemInternals.get(i).viewType == VIEW_TYPE_AD_STRIP) {
-                        dialogsHeight += AndroidUtilities.dp(AD_STRIP_HEIGHT_DP);
+                        dialogsHeight += AndroidUtilities.dp(adStripHeightDp());
                     }
                 }
                 dialogsHeight += size - 1;
@@ -1922,7 +1922,14 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 && !hasHints
                 && parentFragment != null
                 && !parentFragment.isArchive()
-                && org.telegram.messenger.AdBannerController.getInstance().hasAds();
+                && (org.telegram.messenger.AdBannerController.getInstance().hasAds() || org.telegram.messenger.AdMobHelper.isStripLoaded());
+    }
+
+    private int adStripHeightDp() {
+        if (!org.telegram.messenger.AdBannerController.getInstance().hasAds() && org.telegram.messenger.AdMobHelper.isStripLoaded()) {
+            return org.telegram.messenger.AdMobHelper.stripHeightDp();
+        }
+        return AD_STRIP_HEIGHT_DP;
     }
 
     private final Runnable adsLoadedListener = () -> {
@@ -1937,6 +1944,12 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         if (folderId == 0 && (dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT || dialogsType == 7 || dialogsType == 8) && !isOnlySelect) {
             org.telegram.messenger.AdBannerController.getInstance().addListener(adsLoadedListener);
             org.telegram.messenger.AdBannerController.getInstance().load();
+            // no own ads: ask Google for a banner (the row is added only once it has loaded)
+            org.telegram.messenger.AdBannerController.getInstance().whenReady(() -> {
+                if (!org.telegram.messenger.AdBannerController.getInstance().hasAds() && parentFragment != null && parentFragment.getParentActivity() != null) {
+                    org.telegram.messenger.AdMobHelper.preloadStrip(parentFragment.getParentActivity(), adsLoadedListener);
+                }
+            }, 3000);
         }
     }
 
@@ -1955,7 +1968,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             }
         }
         if (itemInternals.get(position).viewType == VIEW_TYPE_AD_STRIP) {
-            return AndroidUtilities.dp(AD_STRIP_HEIGHT_DP) + 1;
+            return AndroidUtilities.dp(adStripHeightDp()) + 1;
         }
         return 0;
     }
