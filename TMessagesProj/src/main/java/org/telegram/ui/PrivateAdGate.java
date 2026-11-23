@@ -53,15 +53,57 @@ public class PrivateAdGate {
                 pool = ads.getAds();
             }
             if (pool == null || pool.isEmpty()) {
-                // no ad could be loaded (offline, or none are active): never block the user
-                onDone.run();
+                // no own ad: Google rewarded video (the user chooses to watch), then a banner, and never block the user
+                final android.app.Activity activity = AndroidUtilities.findActivity(context);
+                if (activity == null) {
+                    onDone.run();
+                    return;
+                }
+                org.telegram.messenger.AdMobHelper.loadRewarded(activity, new org.telegram.messenger.AdMobHelper.RewardedCallback() {
+                    @Override
+                    public void onLoaded(com.google.android.gms.ads.rewarded.RewardedAd rewardedAd) {
+                        askToWatch(activity, rewardedAd, onDone);
+                    }
+
+                    @Override
+                    public void onFailed() {
+                        showGoogleBanner(activity, onDone);
+                    }
+                });
                 return;
             }
-            show(context, pool.get(new Random().nextInt(pool.size())), onDone);
+            show(context, pool.get(new Random().nextInt(pool.size())), null, onDone);
         }, 3000);
     }
 
-    private static void show(final Context context, final AdBannerController.Ad ad, final Runnable onDone) {
+    private static void askToWatch(final android.app.Activity activity, final com.google.android.gms.ads.rewarded.RewardedAd rewardedAd, final Runnable onDone) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("Maxfiy chatlar");
+        builder.setMessage("Qisqa reklama videosini oxirigacha ko'ring: maxfiy chatlar 3 kun davomida reklamasiz ochiladi.");
+        builder.setPositiveButton("Videoni ko'rish", (d, w) -> org.telegram.messenger.AdMobHelper.showRewarded(activity, rewardedAd, () -> {
+            PrivateChatController.getInstance().grantAdPass();
+            onDone.run();
+        }));
+        builder.setNegativeButton("Bekor qilish", null);
+        builder.create().show();
+    }
+
+    private static void showGoogleBanner(final android.app.Activity activity, final Runnable onDone) {
+        int widthDp = (int) Math.min(300, AndroidUtilities.displaySize.x / AndroidUtilities.density - 48 - 44);
+        org.telegram.messenger.AdMobHelper.loadGateBanner(activity, widthDp, new org.telegram.messenger.AdMobHelper.GateCallback() {
+            @Override
+            public void onLoaded(com.google.android.gms.ads.AdView view) {
+                show(activity, null, view, onDone);
+            }
+
+            @Override
+            public void onFailed() {
+                onDone.run();
+            }
+        });
+    }
+
+    private static void show(final Context context, final AdBannerController.Ad ad, final com.google.android.gms.ads.AdView googleBanner, final Runnable onDone) {
         final int textColor = Theme.getColor(Theme.key_dialogTextBlack);
         final int hintColor = Theme.getColor(Theme.key_dialogTextHint);
         final int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
@@ -80,7 +122,7 @@ public class PrivateAdGate {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         final VideoView video;
-        if (ad.hasVideo()) {
+        if (ad != null && ad.hasVideo()) {
             video = new VideoView(context);
             LinearLayout.LayoutParams videoLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(190));
@@ -90,17 +132,30 @@ public class PrivateAdGate {
             video = null;
         }
 
+        if (googleBanner != null) {
+            if (googleBanner.getParent() instanceof ViewGroup) {
+                ((ViewGroup) googleBanner.getParent()).removeView(googleBanner);
+            }
+            LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            bannerLp.topMargin = AndroidUtilities.dp(10);
+            bannerLp.gravity = Gravity.CENTER_HORIZONTAL;
+            box.addView(googleBanner, bannerLp);
+        }
+
         TextView text = new TextView(context);
-        text.setText(ad.text);
+        text.setText(ad != null ? ad.text : "");
         text.setTextSize(18);
         text.setTypeface(AndroidUtilities.bold());
         text.setTextColor(textColor);
         LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         textLp.topMargin = AndroidUtilities.dp(10);
-        box.addView(text, textLp);
+        if (ad != null) {
+            box.addView(text, textLp);
+        }
 
-        if (ad.url != null && !ad.url.isEmpty()) {
+        if (ad != null && ad.url != null && !ad.url.isEmpty()) {
             TextView more = new TextView(context);
             more.setText("Batafsil →");
             more.setTextSize(15);
@@ -161,6 +216,15 @@ public class PrivateAdGate {
         holder[0] = dialog;
         dialog.setCanceledOnTouchOutside(false);
         dialog.show();
+
+        dialog.setOnDismissListener(d -> {
+            if (googleBanner != null) {
+                try {
+                    googleBanner.destroy();
+                } catch (Throwable ignore) {
+                }
+            }
+        });
 
         final int[] left = {SECONDS};
         final Runnable[] tick = new Runnable[1];
