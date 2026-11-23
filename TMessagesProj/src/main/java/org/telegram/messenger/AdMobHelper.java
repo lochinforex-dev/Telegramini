@@ -212,7 +212,7 @@ public class AdMobHelper {
             }
             callback.onFailed();
         };
-        AndroidUtilities.runOnUIThread(fail, 6000);
+        AndroidUtilities.runOnUIThread(fail, 5000);
         prepare(activity, () -> {
             if (finished[0]) {
                 return;
@@ -255,8 +255,51 @@ public class AdMobHelper {
         void onFailed();
     }
 
-    /** Loads a rewarded video. Exactly one callback is called (failure also after 8 seconds). */
+    private static RewardedAd cachedRewarded;
+    private static long cachedRewardedAt;
+    private static boolean rewardedLoading;
+
+    private static boolean rewardedFresh() {
+        return cachedRewarded != null && System.currentTimeMillis() - cachedRewardedAt < 45 * 60 * 1000L;
+    }
+
+    /** Loads a rewarded video in advance, so the Maxfiy gate can show it at once. */
+    public static void preloadRewarded(final Activity activity) {
+        if (activity == null || rewardedLoading || rewardedFresh()) {
+            return;
+        }
+        rewardedLoading = true;
+        prepare(activity, () -> {
+            try {
+                RewardedAd.load(activity.getApplicationContext(), rewardedUnitId(), new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(RewardedAd ad) {
+                        cachedRewarded = ad;
+                        cachedRewardedAt = System.currentTimeMillis();
+                        rewardedLoading = false;
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(LoadAdError error) {
+                        rewardedLoading = false;
+                    }
+                });
+            } catch (Throwable e) {
+                rewardedLoading = false;
+            }
+        });
+        // if prepare never answers (no consent), allow another try later
+        AndroidUtilities.runOnUIThread(() -> rewardedLoading = false, 30000);
+    }
+
+    /** Loads a rewarded video (at once if one was loaded in advance). Exactly one callback is called. */
     public static void loadRewarded(final Activity activity, final RewardedCallback callback) {
+        if (rewardedFresh()) {
+            RewardedAd ready = cachedRewarded;
+            cachedRewarded = null;
+            callback.onLoaded(ready);
+            return;
+        }
         final boolean[] finished = {false};
         final Runnable fail = () -> {
             if (finished[0]) {
@@ -265,7 +308,7 @@ public class AdMobHelper {
             finished[0] = true;
             callback.onFailed();
         };
-        AndroidUtilities.runOnUIThread(fail, 8000);
+        AndroidUtilities.runOnUIThread(fail, 5000);
         prepare(activity, () -> {
             if (finished[0]) {
                 return;
@@ -301,6 +344,7 @@ public class AdMobHelper {
         ad.setFullScreenContentCallback(new FullScreenContentCallback() {
             @Override
             public void onAdDismissedFullScreenContent() {
+                preloadRewarded(activity);
                 if (rewarded[0]) {
                     onReward.run();
                 }
