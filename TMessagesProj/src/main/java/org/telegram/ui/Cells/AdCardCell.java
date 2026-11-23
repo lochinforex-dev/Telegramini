@@ -1,5 +1,6 @@
 package org.telegram.ui.Cells;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,7 +14,14 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.LoadAdError;
+
 import org.telegram.messenger.AdBannerController;
+import org.telegram.messenger.AdMobHelper;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.browser.Browser;
@@ -28,7 +36,9 @@ import java.util.List;
 /**
  * A rounded ad card for the Kundalik home page: a small picture on the left, the ad text
  * and a permanent "Reklama" label. Ads come from the same Firebase list as the chat list banner.
- * Two ads take turns. The card is hidden when there are no ads. Tapping opens the ad link.
+ * Two ads take turns. Tapping opens the ad link.
+ * When there is no own ad, a Google AdMob banner is shown instead (after the user's consent).
+ * The card is hidden when neither is available.
  */
 public class AdCardCell extends FrameLayout {
 
@@ -42,6 +52,9 @@ public class AdCardCell extends FrameLayout {
     private final TextView textView;
     private final TextView tagView;
     private final LinearLayout content;
+    private AdView admobView;
+    private boolean admobLoaded;
+    private boolean admobRequested;
 
     private List<AdBannerController.Ad> ads = Collections.emptyList();
     private int index;
@@ -141,10 +154,11 @@ public class AdCardCell extends FrameLayout {
 
     private void applyCurrent() {
         if (ads.isEmpty()) {
-            setVisibility(GONE);
+            showOwn(false);
+            requestAdMob();
             return;
         }
-        setVisibility(VISIBLE);
+        showOwn(true);
         final AdBannerController.Ad ad = ads.get(Math.min(index, ads.size() - 1));
         textView.setText(ad.text);
         if (ad.hasImage()) {
@@ -168,6 +182,63 @@ public class AdCardCell extends FrameLayout {
         LinearLayout.LayoutParams tp = (LinearLayout.LayoutParams) textView.getLayoutParams();
         tp.leftMargin = imageView.getVisibility() == VISIBLE ? AndroidUtilities.dp(12) : 0;
         textView.setLayoutParams(tp);
+    }
+
+    /** true = own ad card, false = AdMob banner (or hidden until it has loaded). */
+    private void showOwn(boolean own) {
+        content.setVisibility(own ? VISIBLE : GONE);
+        tagView.setVisibility(own ? VISIBLE : GONE);
+        if (admobView != null) {
+            admobView.setVisibility(own ? GONE : VISIBLE);
+        }
+        setVisibility(own || admobLoaded ? VISIBLE : GONE);
+    }
+
+    private void requestAdMob() {
+        if (admobRequested) {
+            return;
+        }
+        final Activity activity = AndroidUtilities.findActivity(getContext());
+        if (activity == null) {
+            return;
+        }
+        admobRequested = true;
+        AdMobHelper.prepare(activity, () -> {
+            if (admobView != null) {
+                return;
+            }
+            try {
+                final int widthDp = Math.max(280, (int) ((AndroidUtilities.displaySize.x - AndroidUtilities.dp(32 + 12)) / AndroidUtilities.density));
+                admobView = new AdView(getContext());
+                admobView.setAdUnitId(AdMobHelper.bannerUnitId());
+                admobView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(getContext(), widthDp));
+                admobView.setAdListener(new AdListener() {
+                    @Override
+                    public void onAdLoaded() {
+                        admobLoaded = true;
+                        if (ads.isEmpty()) {
+                            showOwn(false);
+                        }
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(LoadAdError error) {
+                        admobLoaded = false;
+                        if (ads.isEmpty()) {
+                            showOwn(false);
+                        }
+                    }
+                });
+                LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL);
+                lp.topMargin = AndroidUtilities.dp(6);
+                lp.bottomMargin = AndroidUtilities.dp(6);
+                addView(admobView, lp);
+                admobView.setVisibility(ads.isEmpty() ? VISIBLE : GONE);
+                admobView.loadAd(new AdRequest.Builder().build());
+            } catch (Throwable e) {
+                admobView = null;
+            }
+        });
     }
 
     private void loadImage(final String address) {
@@ -244,6 +315,9 @@ public class AdCardCell extends FrameLayout {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         attached = true;
+        if (admobView != null) {
+            admobView.resume();
+        }
         AdBannerController.getInstance().addListener(reloadListener);
         AdBannerController.getInstance().load();
         update();
@@ -253,6 +327,9 @@ public class AdCardCell extends FrameLayout {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         attached = false;
+        if (admobView != null) {
+            admobView.pause();
+        }
         AdBannerController.getInstance().removeListener(reloadListener);
         AndroidUtilities.cancelRunOnUIThread(rotateRunnable);
         content.animate().cancel();
