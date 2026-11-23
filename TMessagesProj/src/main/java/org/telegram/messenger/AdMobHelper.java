@@ -338,12 +338,24 @@ public class AdMobHelper {
         });
     }
 
+    private static long adScreenGraceUntil;
+
+    /** True while Google's full-screen video is open (and for a moment after): leaving the app screen then is not "leaving the app". */
+    public static boolean isAdScreenActive() {
+        return System.currentTimeMillis() < adScreenGraceUntil;
+    }
+
+    private static void adScreenClosed() {
+        adScreenGraceUntil = System.currentTimeMillis() + 2500;
+    }
+
     /** Shows the loaded video. onReward runs only if the user watched it to the end. */
     public static void showRewarded(final Activity activity, RewardedAd ad, final Runnable onReward) {
         final boolean[] rewarded = {false};
         ad.setFullScreenContentCallback(new FullScreenContentCallback() {
             @Override
             public void onAdDismissedFullScreenContent() {
+                adScreenClosed();
                 preloadRewarded(activity);
                 if (rewarded[0]) {
                     onReward.run();
@@ -352,6 +364,7 @@ public class AdMobHelper {
 
             @Override
             public void onAdFailedToShowFullScreenContent(AdError error) {
+                adScreenClosed();
                 // could not play: do not punish the user
                 if (!rewarded[0]) {
                     rewarded[0] = true;
@@ -359,6 +372,7 @@ public class AdMobHelper {
                 }
             }
         });
+        adScreenGraceUntil = System.currentTimeMillis() + 3 * 60 * 1000L; // safety limit if no close event arrives
         ad.show(activity, (OnUserEarnedRewardListener) item -> rewarded[0] = true);
     }
 }
