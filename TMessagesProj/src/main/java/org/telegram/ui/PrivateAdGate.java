@@ -82,7 +82,8 @@ public class PrivateAdGate {
         builder.setMessage("Qisqa reklama videosini oxirigacha ko'ring: maxfiy chatlar 3 kun davomida reklamasiz ochiladi.");
         builder.setPositiveButton("Videoni ko'rish", (d, w) -> org.telegram.messenger.AdMobHelper.showRewarded(activity, rewardedAd, () -> {
             PrivateChatController.getInstance().grantAdPass();
-            onDone.run();
+            // the ad screen is still closing: wait a moment, otherwise the chat may fail to open
+            AndroidUtilities.runOnUIThread(onDone, 500);
         }));
         builder.setNegativeButton("Bekor qilish", null);
         builder.create().show();
