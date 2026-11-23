@@ -140,7 +140,7 @@ public final class TabrikGif {
         final int total = t.length() + b.length() + s.length();
         final ArrayList<Integer> ends = new ArrayList<>();
         if (mode == 0) {
-            int step = Math.max(1, (int) Math.ceil(total / 32.0));
+            int step = Math.max(1, (int) Math.ceil(total / 100.0));
             for (int v = step; v < total; v += step) {
                 ends.add(v);
             }
@@ -183,10 +183,11 @@ public final class TabrikGif {
         if (clean.isEmpty() || clean.get(clean.size() - 1) != total) {
             clean.add(total);
         }
-        if (clean.size() > 44) {
+        final int cap = mode == 0 ? 110 : 44;
+        if (clean.size() > cap) {
             ArrayList<Integer> merged = new ArrayList<>();
-            double stepF = clean.size() / 44.0;
-            for (int i = 0; i < 44; i++) {
+            double stepF = clean.size() / (double) cap;
+            for (int i = 0; i < cap; i++) {
                 merged.add(clean.get(Math.min(clean.size() - 1, (int) Math.round((i + 1) * stepF) - 1)));
             }
             clean = merged;
@@ -206,14 +207,20 @@ public final class TabrikGif {
         void onProgress(int percent);
     }
 
+    public static final String[] VARIANT_NAMES = {"Oddiy", "Tekis vaqt", "To'liq kadr", "Ikkalasi"};
+
     public static void create(File outFile, TabrikCards.Design design, int tint, String title, String body,
                               String sig, int effect) throws IOException {
-        create(outFile, design, tint, title, body, sig, effect, null);
+        create(outFile, design, tint, title, body, sig, effect, 0, null);
     }
 
     /** Creates the GIF file. Takes a few seconds, so call it from a background thread. */
     public static void create(File outFile, TabrikCards.Design design, int tint, String title, String body,
-                              String sig, int effect, Progress progress) throws IOException {
+                              String sig, int effect, int variant, Progress progress) throws IOException {
+        // variant bit 0: all frame times are multiples of 0.04 s (25 frames per second);
+        // variant bit 1: every frame is written completely (no transparent "changed part only" frames)
+        final boolean grid = (variant & 1) != 0;
+        final boolean full = (variant & 2) != 0;
         final int mode = MODE[Math.max(0, Math.min(MODE.length - 1, effect))];
         final int fx = FX[Math.max(0, Math.min(FX.length - 1, effect))];
         final String t = title == null ? "" : title;
@@ -229,7 +236,7 @@ public final class TabrikGif {
         for (int f = 0; f < frames; f++) {
             reveal[f] = f == 0 ? 0 : (f <= k ? steps[f - 1] : total);
             if (fx == 0) {
-                delay[f] = f == 0 ? 25 : (mode == 0 ? 7 : mode == 1 ? 10 : 80);
+                delay[f] = f == 0 ? (grid ? 24 : 25) : (mode == 0 ? (grid ? 4 : 5) : mode == 1 ? (grid ? 8 : 9) : 80);
             } else {
                 delay[f] = 8;
             }
@@ -322,7 +329,7 @@ public final class TabrikGif {
                 }
 
                 int minX = 0, minY = 0, maxX = W - 1, maxY = H - 1;
-                if (f > 0) {
+                if (f > 0 && !full) {
                     minX = W;
                     minY = H;
                     maxX = -1;
@@ -352,7 +359,7 @@ public final class TabrikGif {
                 for (int y = minY; y <= maxY; y++) {
                     for (int x = minX; x <= maxX; x++) {
                         final int p = y * W + x;
-                        if (f > 0 && cur[p] == prev[p]) {
+                        if (f > 0 && !full && cur[p] == prev[p]) {
                             sub[n++] = (byte) TRANSPARENT;
                         } else {
                             sub[n++] = cur[p];
@@ -365,7 +372,7 @@ public final class TabrikGif {
                 out.write(0x21);
                 out.write(0xF9);
                 out.write(0x04);
-                out.write(0x05);
+                out.write(full ? 0x04 : 0x05);
                 writeShort(out, delay[f]);
                 out.write(TRANSPARENT);
                 out.write(0x00);

@@ -78,6 +78,8 @@ public class TaqvimTabrik extends FrameLayout {
     private final ArrayList<TextView> fxChips = new ArrayList<>();
     private int fxIndex;
     private TextView gifButton;
+    private int gifVariant;
+    private final ArrayList<TextView> variantChips = new ArrayList<>();
     private boolean gifBusy;
 
     public TaqvimTabrik(BaseFragment fragment, Context context, int textColor, int accent, int cardColor) {
@@ -316,6 +318,15 @@ public class TaqvimTabrik extends FrameLayout {
         }
     }
 
+    private void updateVariantChips() {
+        for (int i = 0; i < variantChips.size(); i++) {
+            TextView c = variantChips.get(i);
+            boolean on = i == gifVariant;
+            c.setBackground(Theme.createRoundRectDrawable(dp(16), on ? accent : cardColor));
+            c.setTextColor(on ? 0xFFFFFFFF : textColor);
+        }
+    }
+
     private TextView sendButton(Context ctx, String text, int[] colors, View.OnClickListener l) {
         TextView tv = new TextView(ctx);
         tv.setText(text);
@@ -350,6 +361,8 @@ public class TaqvimTabrik extends FrameLayout {
         tpl = 0;
         fxIndex = TabrikGif.defaultEffect(cat);
         fxChips.clear();
+        variantChips.clear();
+        gifVariant = 0;
         toName = "";
         bodyEdited = false;
         chips.clear();
@@ -516,6 +529,34 @@ public class TaqvimTabrik extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         updateFxChips();
 
+        // test: four ways of writing the GIF (to find out which one is smooth on phones)
+        root.addView(label(t("GIF turi (sinov)", "Тип GIF (тест)", "GIF type (test)")));
+        HorizontalScrollView varScroll = new HorizontalScrollView(ctx);
+        varScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout varRow = new LinearLayout(ctx);
+        varRow.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < TabrikGif.VARIANT_NAMES.length; i++) {
+            final int vi = i;
+            TextView chip = new TextView(ctx);
+            chip.setText((i + 1) + ". " + TabrikGif.VARIANT_NAMES[i]);
+            chip.setTextSize(14);
+            chip.setTypeface(AndroidUtilities.bold());
+            chip.setPadding(dp(16), dp(8), dp(16), dp(8));
+            chip.setOnClickListener(v -> {
+                gifVariant = vi;
+                updateVariantChips();
+            });
+            variantChips.add(chip);
+            LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            vlp.rightMargin = dp(8);
+            varRow.addView(chip, vlp);
+        }
+        varScroll.addView(varRow);
+        root.addView(varScroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        updateVariantChips();
+
         // send: picture or animated GIF
         LinearLayout sendRow = new LinearLayout(ctx);
         sendRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -629,6 +670,7 @@ public class TaqvimTabrik extends FrameLayout {
         final String body = bodyText;
         final String sig = signature();
         final int effect = fxIndex;
+        final int variant = gifVariant;
         // The GIF must NOT be inside the app's private folder (/data/data/...): Telegram refuses to send
         // such files, so it is kept in the cache folder on the external storage.
         File cacheDir = null;
@@ -658,7 +700,7 @@ public class TaqvimTabrik extends FrameLayout {
                 }
                 File file = new File(dir, "tabrik_" + System.currentTimeMillis() + ".gif");
                 final int[] lastShown = {-1};
-                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect, percent -> {
+                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect, variant, percent -> {
                     if (percent - lastShown[0] >= 4 || percent >= 100) {
                         lastShown[0] = percent;
                         AndroidUtilities.runOnUIThread(() -> {
