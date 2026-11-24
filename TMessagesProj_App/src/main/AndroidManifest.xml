@@ -7,7 +7,7 @@
         <!-- FastMessenger: AdMob application id. This one is Google's TEST id; put the real one from AdMob here before release. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-8880729564549713~3309035987" />
         <service
             android:name="org.telegram.messenger.GoogleVoiceClientService"
             android:exported="true"
