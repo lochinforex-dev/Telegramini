@@ -135,6 +135,49 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     private boolean onlyUsers;
     private boolean needPhonebook;
     public boolean hasMainTabs;
+
+    // FastMessenger: Google banner at the top of the Contacts tab (own ads active -> nothing is shown here)
+    private android.widget.FrameLayout fmAdHolder;
+    private com.google.android.gms.ads.AdView fmAdView;
+    private int fmAdHeightPx;
+
+    private void fmLoadAd(final Context context) {
+        if (!hasMainTabs || fmAdHolder != null || getParentActivity() == null) {
+            return;
+        }
+        fmAdHolder = new android.widget.FrameLayout(context);
+        fmAdHolder.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        fmAdHolder.setVisibility(View.GONE);
+        contentView.addView(fmAdHolder, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+        org.telegram.messenger.AdBannerController.getInstance().load();
+        org.telegram.messenger.AdBannerController.getInstance().whenReady(() -> {
+            final Activity activity = getParentActivity();
+            if (activity == null || fmAdHolder == null || org.telegram.messenger.AdBannerController.getInstance().hasAds()) {
+                return;
+            }
+            int widthDp = (int) (AndroidUtilities.displaySize.x / AndroidUtilities.density);
+            org.telegram.messenger.AdMobHelper.loadBanner(activity, widthDp, 10000, new org.telegram.messenger.AdMobHelper.GateCallback() {
+                @Override
+                public void onLoaded(com.google.android.gms.ads.AdView view) {
+                    if (fmAdHolder == null) {
+                        view.destroy();
+                        return;
+                    }
+                    fmAdView = view;
+                    fmAdHolder.removeAllViews();
+                    fmAdHolder.addView(view, new android.widget.FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL));
+                    fmAdHeightPx = view.getAdSize() != null ? view.getAdSize().getHeightInPixels(activity) : AndroidUtilities.dp(56);
+                    fmAdHolder.setVisibility(View.VISIBLE);
+                    checkUi_listViewPadding();
+                }
+
+                @Override
+                public void onFailed() {
+                }
+            });
+        }, 1500);
+    }
     private boolean destroyAfterSelect;
     private boolean returnAsResult;
     private boolean createSecretChat;
@@ -226,6 +269,11 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (fmAdView != null) {
+            fmAdView.destroy();
+            fmAdView = null;
+        }
+        fmAdHolder = null;
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.contactsDidLoad);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.updateInterfaces);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.encryptedChatCreated);
@@ -438,6 +486,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         listView.setClipToPadding(false);
         scrollHelper = new RecyclerAnimationScrollHelper(listView, layoutManager);
         contentView.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        fmLoadAd(context);
 
         listView.setEmptyView(emptyView);
         listView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
@@ -1066,6 +1115,9 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     @Override
     public void onResume() {
         super.onResume();
+        if (fmAdView != null) {
+            fmAdView.resume();
+        }
         if (listViewAdapter != null) {
             listViewAdapter.notifyDataSetChanged();
         }
@@ -1177,6 +1229,9 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     @Override
     public void onPause() {
         super.onPause();
+        if (fmAdView != null) {
+            fmAdView.pause();
+        }
         if (simpleActionBar != null) {
             simpleActionBar.closeSearchField();
         }
@@ -1366,7 +1421,15 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     private int statusBarInset;
 
     private void checkUi_listViewPadding() {
-        BaseFragmentSimpleGlass.setListViewParams(listView, statusBarInset, navigationBarHeight, ActionBar.getCurrentActionBarHeight(), additionNavigationBarHeight);
+        BaseFragmentSimpleGlass.setListViewParams(listView, statusBarInset, navigationBarHeight, ActionBar.getCurrentActionBarHeight() + fmAdHeightPx, additionNavigationBarHeight);
+        if (fmAdHolder != null && fmAdHolder.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
+            android.view.ViewGroup.MarginLayoutParams adLp = (android.view.ViewGroup.MarginLayoutParams) fmAdHolder.getLayoutParams();
+            int top = statusBarInset + ActionBar.getCurrentActionBarHeight();
+            if (adLp.topMargin != top) {
+                adLp.topMargin = top;
+                fmAdHolder.setLayoutParams(adLp);
+            }
+        }
     }
 
     private boolean lastIsEmpty;
