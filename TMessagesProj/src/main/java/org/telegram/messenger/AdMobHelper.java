@@ -28,14 +28,12 @@ import java.util.ArrayList;
 public class AdMobHelper {
 
     /** TRUE = Google's test ads (safe while testing). Set to FALSE only with real ad unit ids below. */
-    public static final boolean USE_TEST_IDS = true;
+    public static final boolean USE_TEST_IDS = false;
 
     private static final String TEST_BANNER = "ca-app-pub-3940256099942544/9214589741";
-    // TODO: put the real banner ad unit id from AdMob here (looks like ca-app-pub-1234567890123456/1234567890)
     private static final String REAL_BANNER = "ca-app-pub-8880729564549713/8005938248";
 
     private static final String TEST_REWARDED = "ca-app-pub-3940256099942544/5224354917";
-    // TODO: put the real rewarded ad unit id here (ca-app-pub-8880729564549713/xxxxxxxxxx)
     private static final String REAL_REWARDED = "ca-app-pub-8880729564549713/4492913698";
 
     public static String rewardedUnitId() {
