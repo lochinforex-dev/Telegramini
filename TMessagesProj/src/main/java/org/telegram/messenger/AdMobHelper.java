@@ -195,6 +195,11 @@ public class AdMobHelper {
 
     /** Loads a banner for the Maxfiy gate. Calls exactly one callback (failure also after 4 seconds). */
     public static void loadGateBanner(final Activity activity, final int widthDp, final GateCallback callback) {
+        loadBanner(activity, widthDp, 5000, callback);
+    }
+
+    /** Loads a separate adaptive banner (own AdView). Calls exactly one callback; failure also after timeoutMs. */
+    public static void loadBanner(final Activity activity, final int widthDp, final long timeoutMs, final GateCallback callback) {
         final boolean[] finished = {false};
         final AdView[] holder = new AdView[1];
         final Runnable fail = () -> {
@@ -210,7 +215,7 @@ public class AdMobHelper {
             }
             callback.onFailed();
         };
-        AndroidUtilities.runOnUIThread(fail, 5000);
+        AndroidUtilities.runOnUIThread(fail, timeoutMs);
         prepare(activity, () -> {
             if (finished[0]) {
                 return;
