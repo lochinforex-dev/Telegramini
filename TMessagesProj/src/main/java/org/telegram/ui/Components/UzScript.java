@@ -50,7 +50,11 @@ public class UzScript {
         }
         if (from == to) {
             // Latin to Latin: only straighten o' g' written in any way (o' o` o’ oʻ ...) into the standard o‘ g‘
-            return from == LAT ? normalizeLatin(s) : s;
+            if (from == LAT) {
+                return normalizeLatin(s);
+            }
+            // new alphabet written half old, half new: finish it (sh -> ş, ch -> ç, o' o` oʻ ... -> ö, g' -> ğ)
+            return from == NEW ? latToNew(newToLat(s)) : s;
         }
         String latin;
         switch (from) {
@@ -63,6 +67,12 @@ public class UzScript {
             case NEW: return latToNew(latin);
             default:  return latin;
         }
+    }
+
+    /** True when text that already has new letters still has old ones (sh, ch, o', g') left to convert. */
+    public static boolean needsNew(CharSequence text) {
+        String s = text.toString();
+        return !latToNew(s).equals(s);
     }
 
     /** True when the Latin text has o' or g' written with a different mark than the standard ‘. */

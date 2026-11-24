@@ -542,6 +542,10 @@ public class UzScriptChip {
                 actions.add(new int[]{UzScript.CYR, UzScript.NEW});
                 break;
             case UzScript.NEW:
+                if (UzScript.needsNew(text)) {
+                    labels.add("Hammasini yangi alifboga (sh→ş, o'→ö)");
+                    actions.add(new int[]{UzScript.NEW, UzScript.NEW});
+                }
                 labels.add("Hozirgi lotinga");
                 actions.add(new int[]{UzScript.NEW, UzScript.LAT});
                 labels.add("Kirillga");
