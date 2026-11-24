@@ -548,6 +548,10 @@ public class UzScriptChip {
                 actions.add(new int[]{UzScript.NEW, UzScript.CYR});
                 break;
             default:
+                if (UzScript.needsNormalize(text)) {
+                    labels.add("O‘ va G‘ ni to‘g‘rilash (o' → o‘)");
+                    actions.add(new int[]{UzScript.LAT, UzScript.LAT});
+                }
                 labels.add("Kirillga");
                 actions.add(new int[]{UzScript.LAT, UzScript.CYR});
                 labels.add("Yangi alifboga (ş ç ö ğ)");

@@ -45,8 +45,12 @@ public class UzScript {
     }
 
     public static String convert(String s, int from, int to) {
-        if (s == null || s.isEmpty() || from == to || from == NONE) {
+        if (s == null || s.isEmpty() || from == NONE) {
             return s;
+        }
+        if (from == to) {
+            // Latin to Latin: only straighten o' g' written in any way (o' o` o’ oʻ ...) into the standard o‘ g‘
+            return from == LAT ? normalizeLatin(s) : s;
         }
         String latin;
         switch (from) {
@@ -59,6 +63,33 @@ public class UzScript {
             case NEW: return latToNew(latin);
             default:  return latin;
         }
+    }
+
+    /** True when the Latin text has o' or g' written with a different mark than the standard ‘. */
+    public static boolean needsNormalize(CharSequence text) {
+        for (int i = 0; i + 1 < text.length(); i++) {
+            char c = Character.toLowerCase(text.charAt(i));
+            char n = text.charAt(i + 1);
+            if ((c == 'o' || c == 'g') && isApostrophe(n) && n != OKINA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** o' o` o’ oʻ oʼ o´ (and the same for g) all become o‘ g‘, the way it is typed on the Uzbek keyboard. */
+    public static String normalizeLatin(String s) {
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            sb.append(c);
+            char lc = Character.toLowerCase(c);
+            if ((lc == 'o' || lc == 'g') && i + 1 < s.length() && isApostrophe(s.charAt(i + 1))) {
+                sb.append(OKINA);
+                i++;
+            }
+        }
+        return sb.toString();
     }
 
     /* ---------------- helpers ---------------- */
