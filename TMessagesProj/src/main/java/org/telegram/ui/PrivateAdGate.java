@@ -31,7 +31,7 @@ public class PrivateAdGate {
      * TEST SWITCH: while true, the ad is shown every time (the 3-day pass is ignored).
      * Set it to false before the release.
      */
-    private static final boolean ALWAYS_SHOW = true;
+    private static final boolean ALWAYS_SHOW = false;
 
     /** True when an ad has to be shown now (no valid 3-day pass). */
     public static boolean needsAd() {
@@ -73,7 +73,7 @@ public class PrivateAdGate {
                 return;
             }
             show(context, pool.get(new Random().nextInt(pool.size())), null, onDone);
-        }, 3000);
+        }, 1500);
     }
 
     private static void askToWatch(final android.app.Activity activity, final com.google.android.gms.ads.rewarded.RewardedAd rewardedAd, final Runnable onDone) {
@@ -83,7 +83,7 @@ public class PrivateAdGate {
         builder.setPositiveButton("Videoni ko'rish", (d, w) -> org.telegram.messenger.AdMobHelper.showRewarded(activity, rewardedAd, () -> {
             PrivateChatController.getInstance().grantAdPass();
             // the ad screen is still closing: wait a moment, otherwise the chat may fail to open
-            AndroidUtilities.runOnUIThread(onDone, 500);
+            AndroidUtilities.runOnUIThread(onDone, 250);
         }));
         builder.setNegativeButton("Bekor qilish", null);
         builder.create().show();
