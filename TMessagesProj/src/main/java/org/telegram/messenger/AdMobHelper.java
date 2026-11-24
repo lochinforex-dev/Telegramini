@@ -32,11 +32,11 @@ public class AdMobHelper {
 
     private static final String TEST_BANNER = "ca-app-pub-3940256099942544/9214589741";
     // TODO: put the real banner ad unit id from AdMob here (looks like ca-app-pub-1234567890123456/1234567890)
-    private static final String REAL_BANNER = "";
+    private static final String REAL_BANNER = "ca-app-pub-8880729564549713/8005938248";
 
     private static final String TEST_REWARDED = "ca-app-pub-3940256099942544/5224354917";
     // TODO: put the real rewarded ad unit id here (ca-app-pub-8880729564549713/xxxxxxxxxx)
-    private static final String REAL_REWARDED = "";
+    private static final String REAL_REWARDED = "ca-app-pub-8880729564549713/4492913698";
 
     public static String rewardedUnitId() {
         return USE_TEST_IDS || REAL_REWARDED.isEmpty() ? TEST_REWARDED : REAL_REWARDED;
