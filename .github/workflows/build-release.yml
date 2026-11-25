@@ -1,0 +1,93 @@
+name: Build signed release
+
+# Qo'lda ishga tushiriladi: Actions -> Build signed release -> Run workflow
+# Play Market uchun imzolangan AAB (va sinash uchun imzolangan APK) chiqaradi.
+# Imzo kaliti Secrets'dan olinadi (KEYSTORE_B64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
+on:
+  workflow_dispatch:
+    inputs:
+      gradle_task:
+        description: "AAB: :TMessagesProj_App:bundleBundleAfatRelease  |  APK: :TMessagesProj_App:assembleAfatRelease"
+        required: true
+        default: ":TMessagesProj_App:bundleBundleAfatRelease"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/ghc /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - name: Checkout (submodullar bilan)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Accept Android SDK licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Patch api_id / api_hash
+        env:
+          TG_APP_ID: ${{ secrets.TG_APP_ID }}
+          TG_APP_HASH: ${{ secrets.TG_APP_HASH }}
+        run: |
+          F=TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+          if [[ "$TG_APP_ID" =~ ^[0-9]+$ ]] && [[ "$TG_APP_HASH" =~ ^[0-9a-fA-F]+$ ]]; then
+            sed -i -E "s/(APP_ID = )[0-9]+;/\1${TG_APP_ID};/" "$F"
+            sed -i -E "s/(APP_HASH = \")[0-9a-fA-F]*(\";)/\1${TG_APP_HASH}\2/" "$F"
+            echo "api_id/api_hash qo'yildi"
+          else
+            echo "TG_APP_ID / TG_APP_HASH topilmadi yoki formati noto'g'ri. Release uchun o'z kalitlaringiz shart."; exit 1
+          fi
+
+      # Bizning imzo kalitimiz. Fayl faqat shu serverda, vaqtincha turadi va repoga tushmaydi.
+      - name: Put our signing key in place
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "KEYSTORE_B64 secret yo'q"; exit 1; fi
+          echo "$KEYSTORE_B64" | base64 -d > TMessagesProj/config/release.keystore
+
+      - name: Build
+        env:
+          GRADLE_TASK: ${{ inputs.gradle_task }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew "$GRADLE_TASK" --no-daemon --stacktrace \
+            -PRELEASE_STORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$KEY_PASSWORD"
+
+      - name: List available tasks (faqat xatoda)
+        if: failure()
+        run: |
+          ./gradlew :TMessagesProj_App:tasks --all --no-daemon | grep -iE "bundle|assemble" || true
+
+      - name: Upload AAB / APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FastMessenger-release
+          retention-days: 3
+          path: |
+            **/build/outputs/bundle/**/*.aab
+            **/build/outputs/apk/**/*.apk
+          if-no-files-found: error
