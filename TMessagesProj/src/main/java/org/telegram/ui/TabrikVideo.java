@@ -31,6 +31,8 @@ public final class TabrikVideo {
     /** How long the finished card stays on the screen at the end. */
     private static final int HOLD_MS = 10000;
     private static final int RATE = 44100;
+    /** About 3 megabits per second: a 25 second video is then around 10 MB. */
+    private static final int BIT_RATE = 3000000;
 
     /** Typing speed for the letter-by-letter effect (letters per second). */
     private static final double LETTERS_PER_SECOND = 18.0;
@@ -104,13 +106,37 @@ public final class TabrikVideo {
         Surface surface = null;
         boolean ok = false;
         try {
-            MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, W, H);
-            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000);
-            format.setInteger(MediaFormat.KEY_FRAME_RATE, FPS);
-            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-            codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
-            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            // The bit rate mode is set explicitly: some phones ignore the bit rate otherwise and make a huge file.
+            final int[] modes = {MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR,
+                    MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR, -1};
+            Throwable lastError = null;
+            for (int mi = 0; mi < modes.length && codec == null; mi++) {
+                MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, W, H);
+                format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+                format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE);
+                format.setInteger(MediaFormat.KEY_FRAME_RATE, FPS);
+                format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+                if (modes[mi] >= 0) {
+                    format.setInteger(MediaFormat.KEY_BITRATE_MODE, modes[mi]);
+                }
+                MediaCodec candidate = null;
+                try {
+                    candidate = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+                    candidate.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+                    codec = candidate;
+                } catch (Throwable e) {
+                    lastError = e;
+                    try {
+                        if (candidate != null) {
+                            candidate.release();
+                        }
+                    } catch (Throwable ignore) {
+                    }
+                }
+            }
+            if (codec == null) {
+                throw new IOException("no video encoder: " + lastError);
+            }
             surface = codec.createInputSurface();
             codec.start();
             if (outFile.exists()) {
