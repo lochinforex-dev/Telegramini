@@ -502,7 +502,7 @@ public class TaqvimTabrik extends FrameLayout {
         updateSwatches();
 
         // animation of the GIF
-        root.addView(label(t("GIF animatsiyasi", "Анимация GIF", "GIF animation")));
+        root.addView(label(t("Video animatsiyasi", "Анимация видео", "Video animation")));
         HorizontalScrollView fxScroll = new HorizontalScrollView(ctx);
         fxScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout fxRow = new LinearLayout(ctx);
@@ -529,40 +529,12 @@ public class TaqvimTabrik extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         updateFxChips();
 
-        // test: four ways of writing the GIF (to find out which one is smooth on phones)
-        root.addView(label(t("GIF turi (sinov)", "Тип GIF (тест)", "GIF type (test)")));
-        HorizontalScrollView varScroll = new HorizontalScrollView(ctx);
-        varScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout varRow = new LinearLayout(ctx);
-        varRow.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 0; i < TabrikGif.VARIANT_NAMES.length; i++) {
-            final int vi = i;
-            TextView chip = new TextView(ctx);
-            chip.setText((i + 1) + ". " + TabrikGif.VARIANT_NAMES[i]);
-            chip.setTextSize(14);
-            chip.setTypeface(AndroidUtilities.bold());
-            chip.setPadding(dp(16), dp(8), dp(16), dp(8));
-            chip.setOnClickListener(v -> {
-                gifVariant = vi;
-                updateVariantChips();
-            });
-            variantChips.add(chip);
-            LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            vlp.rightMargin = dp(8);
-            varRow.addView(chip, vlp);
-        }
-        varScroll.addView(varRow);
-        root.addView(varScroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        updateVariantChips();
-
-        // send: picture or animated GIF
+        // send: picture or video
         LinearLayout sendRow = new LinearLayout(ctx);
         sendRow.setOrientation(LinearLayout.HORIZONTAL);
         TextView imageBtn = sendButton(ctx, t("Rasm yuborish", "Отправить фото", "Send picture"),
                 new int[]{0xFF5B8DEF, 0xFF7C4DFF}, v -> sendCard());
-        gifButton = sendButton(ctx, t("GIF yuborish", "Отправить GIF", "Send GIF"),
+        gifButton = sendButton(ctx, t("Video yuborish", "Отправить видео", "Send video"),
                 new int[]{0xFFE2557A, 0xFFF6A54B}, v -> sendGif());
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, dp(52), 1f);
         ilp.rightMargin = dp(6);
@@ -655,13 +627,13 @@ public class TaqvimTabrik extends FrameLayout {
         fragment.presentFragment(picker);
     }
 
-    /** Makes the animated GIF in the background and then lets the person choose a chat. */
+    /** Makes the typing video (MP4) in the background and then opens the share window. */
     private void sendGif() {
         if (gifBusy) {
             return;
         }
         gifBusy = true;
-        final String normal = t("GIF yuborish", "Отправить GIF", "Send GIF");
+        final String normal = t("Video yuborish", "Отправить видео", "Send video");
         gifButton.setText(t("Tayyorlanmoqda...", "Готовим...", "Making..."));
         final Context ctx = getContext();
         final TabrikCards.Design design = TabrikCards.designs(cat)[designIndex];
@@ -670,21 +642,7 @@ public class TaqvimTabrik extends FrameLayout {
         final String body = bodyText;
         final String sig = signature();
         final int effect = fxIndex;
-        final int variant = gifVariant;
-        // The GIF must NOT be inside the app's private folder (/data/data/...): Telegram refuses to send
-        // such files, so it is kept in the cache folder on the external storage.
-        File cacheDir = null;
-        try {
-            cacheDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
-        } catch (Throwable ignore) {
-        }
-        if (cacheDir == null) {
-            cacheDir = ctx.getExternalCacheDir();
-        }
-        if (cacheDir == null) {
-            cacheDir = new File(ctx.getFilesDir(), "cache");
-        }
-        final File dir = cacheDir;
+        final File dir = new File(ctx.getFilesDir(), "cache");
         Utilities.globalQueue.postRunnable(() -> {
             File result = null;
             try {
@@ -698,9 +656,9 @@ public class TaqvimTabrik extends FrameLayout {
                         }
                     }
                 }
-                File file = new File(dir, "tabrik_" + System.currentTimeMillis() + ".gif");
+                File file = new File(dir, "tabrik_" + System.currentTimeMillis() + ".mp4");
                 final int[] lastShown = {-1};
-                TabrikGif.create(file, design, tintValue, titleText, body, sig, effect, variant, percent -> {
+                TabrikVideo.create(file, design, tintValue, titleText, body, sig, effect, percent -> {
                     if (percent - lastShown[0] >= 4 || percent >= 100) {
                         lastShown[0] = percent;
                         AndroidUtilities.runOnUIThread(() -> {
@@ -721,13 +679,13 @@ public class TaqvimTabrik extends FrameLayout {
                     gifButton.setText(normal);
                 }
                 if (done == null) {
-                    Toast.makeText(ctx, t("GIF yaratilmadi", "Не удалось создать GIF", "Could not create the GIF"),
+                    Toast.makeText(ctx, t("Video yaratilmadi", "Не удалось создать видео", "Could not create the video"),
                             Toast.LENGTH_SHORT).show();
                 } else {
                     try {
-                        chooseChatAndSend(done);
+                        shareFile(done, "video/mp4");
                     } catch (Throwable e) {
-                        Toast.makeText(ctx, t("GIF yaratilmadi", "Не удалось создать GIF", "Could not create the GIF"),
+                        Toast.makeText(ctx, t("Video yaratilmadi", "Не удалось создать видео", "Could not create the video"),
                                 Toast.LENGTH_SHORT).show();
                     }
                 }

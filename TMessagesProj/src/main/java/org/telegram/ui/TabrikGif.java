@@ -43,6 +43,16 @@ public final class TabrikGif {
     private TabrikGif() {
     }
 
+    /** How the text appears for an effect: 0 letters, 1 words, 2 sentences (used by the video too). */
+    static int modeOf(int effect) {
+        return MODE[Math.max(0, Math.min(MODE.length - 1, effect))];
+    }
+
+    /** Background movement for an effect: 0 none, 1 confetti, 2 snow, 3 stars (used by the video too). */
+    static int fxOf(int effect) {
+        return FX[Math.max(0, Math.min(FX.length - 1, effect))];
+    }
+
     /** The effect that suits the category best (it can be changed in the editor). */
     public static int defaultEffect(int category) {
         switch (category) {
@@ -59,12 +69,12 @@ public final class TabrikGif {
 
     /* ======================================================================== */
 
-    private static final class P {
+    static final class P {
         float x, y, size, phase, rot;
         int k, color;
     }
 
-    private static P[] makeParticles(int fx) {
+    static P[] makeParticles(int fx) {
         if (fx == 0) {
             return new P[0];
         }
@@ -86,7 +96,7 @@ public final class TabrikGif {
         return list;
     }
 
-    private static void drawParticles(Canvas c, int fx, P[] list, float t, boolean lightBg) {
+    static void drawParticles(Canvas c, int fx, P[] list, float t, boolean lightBg) {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         final float span = H + 40;
         for (P p : list) {
@@ -136,7 +146,7 @@ public final class TabrikGif {
     /* ======================================================================== */
 
     /** Positions (in letters) where the text stops growing, one entry per animation frame. */
-    private static int[] buildSteps(int mode, String t, String b, String s) {
+    static int[] buildSteps(int mode, String t, String b, String s) {
         final int total = t.length() + b.length() + s.length();
         final ArrayList<Integer> ends = new ArrayList<>();
         if (mode == 0) {
