@@ -314,6 +314,9 @@ public final class TabrikVideo {
         final int n = (int) ((frames / (double) FPS + 0.2) * RATE);
         final float[] mix = new float[n];
         final Random r = new Random(5);
+        // real key sounds; if they cannot be loaded the synthetic sound below is used
+        final int[] kinds = new int[KeySounds.count()];
+        final float[][] samples = KeySounds.load(kinds);
         int prev = 0;
         for (int f = 0; f < reveals.length; f++) {
             final int now = reveals[f];
@@ -325,46 +328,83 @@ public final class TabrikVideo {
                         final int idx = prev + j;
                         final char ch = idx < text.length() ? text.charAt(idx) : 'a';
                         if (ch == '\n') {
-                            addClick(mix, at, 1.0f, 2, r);
+                            addClick(mix, at, 1.0f, 2, r, samples, kinds);
                         } else if (ch == ' ') {
-                            addClick(mix, at, 0.9f, 1, r);
+                            addClick(mix, at, 0.9f, 1, r, samples, kinds);
                         } else {
-                            addClick(mix, at, 0.6f + r.nextFloat() * 0.4f, 0, r);
+                            addClick(mix, at, 0.6f + r.nextFloat() * 0.4f, 0, r, samples, kinds);
                         }
                     }
                 } else {
-                    addClick(mix, f / (double) FPS, 1.0f, mode == 2 ? 2 : 1, r);
+                    addClick(mix, f / (double) FPS, 1.0f, mode == 2 ? 2 : 1, r, samples, kinds);
                 }
             }
             prev = now;
         }
         final short[] pcm = new short[n];
         for (int i = 0; i < n; i++) {
-            float v = mix[i] * 0.8f;
-            if (v > 0.95f) v = 0.95f;
-            if (v < -0.95f) v = -0.95f;
+            // soft limiter: fast typing does not crackle
+            final float v = (float) Math.tanh(mix[i] * 0.6f) * 0.9f;
             pcm[i] = (short) (v * 32767);
         }
         return encodeAac(pcm);
     }
 
-    /** A short key sound: a sharp click and a soft low thump. kind: 0 letter, 1 space, 2 enter. */
-    private static void addClick(float[] mix, double timeSec, float volume, int kind, Random r) {
+    /**
+     * A key sound like a real keyboard: "sha" when the key goes down (a soft knock with a low body)
+     * and a smaller "q" when it comes up. kind: 0 letter, 1 space, 2 enter.
+     */
+    private static void addClick(float[] mix, double timeSec, float volume, int kind, Random r,
+                                 float[][] samples, int[] kinds) {
+        if (samples != null) {
+            // pick a random real recording of this kind of key
+            int pick = -1;
+            int seen = 0;
+            for (int i = 0; i < samples.length; i++) {
+                if (kinds[i] == kind && r.nextInt(++seen) == 0) {
+                    pick = i;
+                }
+            }
+            if (pick < 0) {
+                pick = 0;
+            }
+            final float[] clip = samples[pick];
+            final int start = (int) (timeSec * RATE);
+            final float gain = volume * 2.2f;
+            for (int i = 0; i < clip.length; i++) {
+                final int p = start + i;
+                if (p < 0 || p >= mix.length) {
+                    break;
+                }
+                mix[p] += clip[i] * gain;
+            }
+            return;
+        }
+        final float size = kind == 0 ? 1f : kind == 1 ? 1.25f : 1.5f;
+        final double body = (kind == 0 ? 320 : kind == 1 ? 230 : 190) + r.nextInt(70);
+        knock(mix, timeSec, volume * size, body, 1.0f, r);
+        // the key comes back up a moment later, quieter and a bit higher
+        knock(mix, timeSec + 0.055 + r.nextFloat() * 0.015, volume * size * 0.4f, body * 1.5, 0.6f, r);
+    }
+
+    private static void knock(float[] mix, double timeSec, float volume, double bodyHz, float edge, Random r) {
         final int start = (int) (timeSec * RATE);
-        final int len = (int) (RATE * (kind == 0 ? 0.03 : 0.05));
-        final double tone = (kind == 0 ? 2200 : kind == 1 ? 1400 : 1000) + r.nextInt(900);
-        final double thump = kind == 0 ? 160 : 110;
-        final float thumpGain = kind == 0 ? 0.35f : 0.7f;
+        final int len = (int) (RATE * 0.05);
+        float lp = 0f; // soft noise: the sharp, thin high sounds are cut away
         for (int i = 0; i < len; i++) {
             final int p = start + i;
             if (p < 0 || p >= mix.length) {
                 break;
             }
-            final double e1 = Math.exp(-i / (RATE * 0.0035));
-            final double e2 = Math.exp(-i / (RATE * 0.012));
-            final double noise = r.nextFloat() * 2 - 1;
-            final double v = (0.6 * noise + 0.5 * Math.sin(2 * Math.PI * tone * i / RATE)) * e1
-                    + thumpGain * Math.sin(2 * Math.PI * thump * i / RATE) * e2;
+            final float noise = r.nextFloat() * 2 - 1;
+            lp += 0.22f * (noise - lp);
+            final double eNoise = Math.exp(-i / (RATE * 0.0022));
+            final double eBody = Math.exp(-i / (RATE * 0.014));
+            final double eLow = Math.exp(-i / (RATE * 0.024));
+            final double v = edge * 1.1 * lp * eNoise
+                    + 0.65 * Math.sin(2 * Math.PI * bodyHz * i / RATE) * eBody
+                    + 0.25 * Math.sin(2 * Math.PI * bodyHz * 2.1 * i / RATE) * eBody * 0.6
+                    + 0.5 * Math.sin(2 * Math.PI * 105.0 * i / RATE) * eLow;
             mix[p] += (float) (v * volume);
         }
     }
