@@ -60,6 +60,7 @@ public class CalendarTabActivity extends BaseFragment {
     private static final int PAGE_DEBTS = 2;
     private static final int PAGE_HOME = 5;
     private static final int PAGE_TABRIK = 6;
+    private static final int PAGE_TAKLIF = 7;
     private int currentPage = PAGE_HOME;
     private View[] pages;
     private FrameLayout content;
@@ -74,9 +75,9 @@ public class CalendarTabActivity extends BaseFragment {
         if (tab == null || tab.currentPage == PAGE_HOME) {
             return false;
         }
-        if (tab.currentPage == PAGE_TABRIK && tab.pages != null && tab.pages.length > PAGE_TABRIK
-                && tab.pages[PAGE_TABRIK] instanceof TaqvimTabrik) {
-            TaqvimTabrik tabrik = (TaqvimTabrik) tab.pages[PAGE_TABRIK];
+        if ((tab.currentPage == PAGE_TABRIK || tab.currentPage == PAGE_TAKLIF) && tab.pages != null
+                && tab.pages.length > tab.currentPage && tab.pages[tab.currentPage] instanceof TaqvimTabrik) {
+            TaqvimTabrik tabrik = (TaqvimTabrik) tab.pages[tab.currentPage];
             if (tabrik.canGoBack()) {
                 if (invoked) {
                     tabrik.goBack();
@@ -278,7 +279,8 @@ public class CalendarTabActivity extends BaseFragment {
                 new TaqvimTasbeh(this, context, textColor, 0xFFF08C00, cardColor),
                 new TaqvimHisoblagich(this, context, textColor, accent, cardColor),
                 new TaqvimHome(context, textColor, accent, cardColor, this::selectPage),
-                new TaqvimTabrik(this, context, textColor, accent, cardColor)
+                new TaqvimTabrik(this, context, textColor, accent, cardColor),
+                new TaqvimTabrik(this, context, textColor, accent, cardColor, true)
         };
         for (View page : pages) {
             content.addView(page, new FrameLayout.LayoutParams(
@@ -325,8 +327,8 @@ public class CalendarTabActivity extends BaseFragment {
         if (pages != null && content != null && pageContext != null) {
             if (index == PAGE_HOME) {
                 ((TaqvimHome) pages[PAGE_HOME]).refresh();
-            } else if (index == PAGE_TABRIK) {
-                ((TaqvimTabrik) pages[PAGE_TABRIK]).reset();
+            } else if (index == PAGE_TABRIK || index == PAGE_TAKLIF) {
+                ((TaqvimTabrik) pages[index]).reset();
             } else if (index == PAGE_DEBTS) {
                 // the calculator may have added a debt: build the list again
                 content.removeView(pages[PAGE_DEBTS]);
@@ -347,7 +349,8 @@ public class CalendarTabActivity extends BaseFragment {
                     t("Tasbeh", "Тасбих", "Tasbih"),
                     t("Hisoblagich", "Калькулятор", "Calculator"),
                     "",
-                    t("Tabriklar", "Поздравления", "Greetings")
+                    t("Tabriklar", "Поздравления", "Greetings"),
+                    t("Taklifnoma", "Приглашения", "Invitations")
             };
             headerTitle.setText(index == PAGE_HOME ? getCalendarTitle() : names[index]);
             headerTitle.setTextSize(index == PAGE_HOME ? 28 : 22);

@@ -63,6 +63,7 @@ public final class TabrikGif {
             case 4: return 3; // 8-mart: konfetti
             case 5: return 2; // Mustaqillik: qator-qator
             case 6: return 2; // O'qituvchilar kuni: qator-qator
+            case 8: return 0; // Taklifnoma: harfma-harf
             default: return 1; // Vatan himoyachilari: so'zma-so'z
         }
     }

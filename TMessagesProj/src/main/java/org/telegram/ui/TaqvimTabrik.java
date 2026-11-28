@@ -82,15 +82,23 @@ public class TaqvimTabrik extends FrameLayout {
     private final ArrayList<TextView> variantChips = new ArrayList<>();
     private boolean gifBusy;
 
+    /** true: this page shows only the invitations (own section); false: the greetings without them. */
+    private final boolean inviteOnly;
+
     public TaqvimTabrik(BaseFragment fragment, Context context, int textColor, int accent, int cardColor) {
+        this(fragment, context, textColor, accent, cardColor, false);
+    }
+
+    public TaqvimTabrik(BaseFragment fragment, Context context, int textColor, int accent, int cardColor, boolean inviteOnly) {
         super(context);
+        this.inviteOnly = inviteOnly;
         this.fragment = fragment;
         this.textColor = textColor;
         this.accent = accent;
         this.cardColor = cardColor;
         this.prefs = context.getSharedPreferences("taqvim_tabrik", Context.MODE_PRIVATE);
         this.fromName = prefs.getString("from", "");
-        showCategories();
+        reset();
     }
 
     private static String t(String uz, String ru, String en) {
@@ -104,20 +112,24 @@ public class TaqvimTabrik extends FrameLayout {
     /* ---------------- navigation ---------------- */
 
     public boolean canGoBack() {
-        return level > 0;
+        return inviteOnly ? level > 1 : level > 0;
     }
 
     public void goBack() {
         if (level == 2) {
             showGrid(cat);
-        } else if (level == 1) {
+        } else if (level == 1 && !inviteOnly) {
             showCategories();
         }
     }
 
     /** Called when the page is opened from the Kundalik home. */
     public void reset() {
-        showCategories();
+        if (inviteOnly) {
+            showGrid(TabrikCards.inviteCategory());
+        } else {
+            showCategories();
+        }
     }
 
     private LinearLayout begin() {
@@ -165,6 +177,9 @@ public class TaqvimTabrik extends FrameLayout {
         final Context ctx = getContext();
         LinearLayout root = begin();
         for (int i = 0; i < TabrikCards.categoryCount(); i++) {
+            if (TabrikCards.isInvitation(i)) {
+                continue;
+            }
             final int category = i;
             LinearLayout card = new LinearLayout(ctx);
             card.setOrientation(LinearLayout.HORIZONTAL);
@@ -192,7 +207,7 @@ public class TaqvimTabrik extends FrameLayout {
 
             TabrikView thumb = new TabrikView(ctx);
             thumb.set(TabrikCards.designs(i)[0], -1, TabrikCards.title(i),
-                    TabrikCards.template(i, 2, ""), "");
+                    TabrikCards.template(i, TabrikCards.isInvitation(i) ? 0 : 2, ""), "");
             card.addView(thumb, new LinearLayout.LayoutParams(dp(60), ViewGroup.LayoutParams.WRAP_CONTENT));
 
             card.setOnClickListener(v -> showGrid(category));
@@ -212,7 +227,9 @@ public class TaqvimTabrik extends FrameLayout {
         swatches.clear();
         final Context ctx = getContext();
         LinearLayout root = begin();
-        root.addView(backRow(t("Turkumlar", "Категории", "Categories")));
+        if (!inviteOnly) {
+            root.addView(backRow(t("Turkumlar", "Категории", "Categories")));
+        }
 
         TextView head = new TextView(ctx);
         head.setText(TabrikCards.categoryName(category));
@@ -234,7 +251,8 @@ public class TaqvimTabrik extends FrameLayout {
                 LinearLayout cell = new LinearLayout(ctx);
                 cell.setOrientation(LinearLayout.VERTICAL);
                 TabrikView tv = new TabrikView(ctx);
-                tv.set(list[idx], -1, TabrikCards.title(category), TabrikCards.template(category, 2, ""), "");
+                tv.set(list[idx], -1, TabrikCards.title(category),
+                        TabrikCards.template(category, TabrikCards.isInvitation(category) ? idx : 2, ""), "");
                 cell.addView(tv, new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 TextView name = new TextView(ctx);
@@ -283,6 +301,9 @@ public class TaqvimTabrik extends FrameLayout {
     }
 
     private String signature() {
+        if (TabrikCards.isInvitation(cat)) {
+            return "";
+        }
         return fromName.trim().isEmpty() ? "" : "\u2014 " + fromName.trim();
     }
 
@@ -358,7 +379,7 @@ public class TaqvimTabrik extends FrameLayout {
         level = 2;
         designIndex = index;
         tint = -1;
-        tpl = 0;
+        tpl = TabrikCards.isInvitation(cat) ? index : 0;
         fxIndex = TabrikGif.defaultEffect(cat);
         fxChips.clear();
         variantChips.clear();
@@ -394,6 +415,9 @@ public class TaqvimTabrik extends FrameLayout {
             chip.setPadding(dp(16), dp(8), dp(16), dp(8));
             chip.setOnClickListener(v -> {
                 tpl = ti;
+                if (TabrikCards.isInvitation(cat)) {
+                    designIndex = ti;
+                }
                 bodyEdited = false;
                 setBody(TabrikCards.template(cat, tpl, toName));
                 updateChips();
@@ -410,9 +434,12 @@ public class TaqvimTabrik extends FrameLayout {
         updateChips();
 
         // text
-        root.addView(label(t("Tabrik matni", "Текст поздравления", "Greeting text")));
+        final boolean invite = TabrikCards.isInvitation(cat);
+        root.addView(label(invite
+                ? t("Taklifnoma matni (har qator kartaning o‘z joyiga tushadi)", "Текст приглашения (каждая строка на своё место)", "Invitation text (each line goes to its place)")
+                : t("Tabrik matni", "Текст поздравления", "Greeting text")));
         bodyEdit = edit(ctx, t("Matnni yozing", "Введите текст", "Write the text"), true);
-        bodyEdit.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_BODY)});
+        bodyEdit.setFilters(new InputFilter[]{new InputFilter.LengthFilter(invite ? 700 : MAX_BODY)});
         bodyEdit.setText(bodyText);
         bodyEdit.addTextChangedListener(new TextWatcher() {
             @Override
@@ -436,7 +463,7 @@ public class TaqvimTabrik extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // names
-        root.addView(label(t("Kimga", "Кому", "To")));
+        root.addView(label(invite ? t("Ism (nikoh va sunnatda ism, yubileyda ism)", "Имя", "Name") : t("Kimga", "Кому", "To")));
         EditText toEdit = edit(ctx, t("Ism (masalan, Dilshod)", "Имя", "Name"), false);
         toEdit.addTextChangedListener(new TextWatcher() {
             @Override
@@ -458,6 +485,7 @@ public class TaqvimTabrik extends FrameLayout {
         root.addView(toEdit, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        if (!invite) {
         root.addView(label(t("Kimdan (ixtiyoriy)", "От кого (необязательно)", "From (optional)")));
         EditText fromEdit = edit(ctx, t("Sizning ismingiz", "Ваше имя", "Your name"), false);
         fromEdit.setText(fromName);
@@ -480,6 +508,9 @@ public class TaqvimTabrik extends FrameLayout {
         root.addView(fromEdit, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        }
+
+        if (!invite) {
         // colours
         root.addView(label(t("Rang", "Цвет", "Colour")));
         LinearLayout swRow = new LinearLayout(ctx);
@@ -500,6 +531,8 @@ public class TaqvimTabrik extends FrameLayout {
         }
         root.addView(swRow);
         updateSwatches();
+
+        }
 
         // animation of the GIF
         root.addView(label(t("Video animatsiyasi", "Анимация видео", "Video animation")));

@@ -115,6 +115,16 @@ public final class TabrikCards {
             {0xFFD9822B, 0xFFF2C14E},
     };
 
+    // ---------------- invitations (the picture is in assets/taklif, see TabrikInvite) ----------------
+    private static final String[] NAMES_INVITE = {"Nikoh to'yi", "Sunnat to'yi", "Beshik to'yi", "Yubiley"};
+    private static final String[] SAMPLE_INVITE = {"Jasur & Madina", "Muhammad Ali", "", "Anvar Karimov"};
+    private static final String[] BODIES_INVITE = {
+            "{to}\nSizni va oilangizni nikoh to'yimizga taklif qilamiz\n15 dekabr · 18:00\n“Registon” to'yxonasi\nSamarqand shahri",
+            "{to}\nFarzandimiz sunnat to'yiga sizni mehmon bo'lishga chorlaymiz\n20 dekabr · 12:00\nQarshi, “Navro'z” to'yxonasi\nMustaqillik ko'chasi 14",
+            "Kichkina malikamiz beshigi to'yiga sizni muhtaram oilangiz bilan taklif qilamiz\n8 dekabr · 15:00\n“Registon” to'yxonasi\nToshkent, Chilonzor, 7-kvartal",
+            "60\n{to}\nYubiley bazmiga taklif qilinasiz\n27 dekabr · 17:00\nBuxoro, “Lab-i Hovuz” restorani"
+    };
+
     private static final Cat[] CATS = {
             // ---------------- Tug'ilgan kun ----------------
             new Cat("Tug'ilgan kun", "Tug'ilgan kuningiz muborak!", 0xFFE2557A, 0xFFF6A54B, NAMES_FUN, new String[]{
@@ -284,6 +294,13 @@ public final class TabrikCards {
                     dz("Qizil", 0xFF8A1F1F, 0xFFC0392F, 1, D_STARS, I_STAR, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE),
                     dz("Kulrang", 0xFF3A4668, 0xFF232C47, 1, D_NONE, I_SHIELD, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE)
             }),
+            // ---------------- Taklifnoma ----------------
+            new Cat("Taklifnoma", "", 0xFF1D3A8A, 0xFFD9A441, NAMES_INVITE, BODIES_INVITE, new Design[]{
+                    sc("Nikoh to'yi", 0xFF14285C, 0xFF14285C, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE),
+                    sc("Sunnat to'yi", 0xFF15110F, 0xFF15110F, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE + 1),
+                    sc("Beshik to'yi", 0xFFF3E4D3, 0xFFF3E4D3, 0, 0xFF7A4F33, TabrikInvite.FIRST_SCENE + 2),
+                    sc("Yubiley", 0xFF3A0F2E, 0xFF3A0F2E, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE + 3)
+            })
     };
 
     private TabrikCards() {
@@ -309,6 +326,21 @@ public final class TabrikCards {
         return CATS[safe(cat)].designs;
     }
 
+    /** Index of the invitation category (it has its own page in Kundalik). */
+    public static int inviteCategory() {
+        for (int i = 0; i < CATS.length; i++) {
+            if (CATS[i].designs[0].scene >= TabrikInvite.FIRST_SCENE) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /** True for the invitation category (its cards come from TabrikInvite). */
+    public static boolean isInvitation(int cat) {
+        return CATS[safe(cat)].designs[0].scene >= TabrikInvite.FIRST_SCENE;
+    }
+
     public static String title(int cat) {
         return CATS[safe(cat)].title;
     }
@@ -322,6 +354,10 @@ public final class TabrikCards {
         String[] bodies = CATS[safe(cat)].bodies;
         String raw = bodies[Math.max(0, Math.min(bodies.length - 1, index))];
         String n = name == null ? "" : name.trim();
+        if (isInvitation(cat)) {
+            final int si = Math.max(0, Math.min(SAMPLE_INVITE.length - 1, index));
+            return raw.replace("{to}", n.isEmpty() ? SAMPLE_INVITE[si] : n);
+        }
         if (raw.startsWith("{to}")) {
             return (n.isEmpty() ? "Do'stim" : n) + raw.substring(4);
         }
@@ -390,6 +426,9 @@ public final class TabrikCards {
      */
     public static float draw(Canvas c, float w, float h, Design d, int tint, String title, String body, String sig,
                              int reveal, Overlay behind, float time, float forcedBodySize) {
+        if (d.scene >= TabrikInvite.FIRST_SCENE) {
+            return TabrikInvite.draw(c, w, h, d.scene, body, reveal, behind);
+        }
         final float s = w / 300f;
         FILL.setStyle(Paint.Style.FILL);
         FILL.setShader(null);

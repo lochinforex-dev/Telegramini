@@ -45,6 +45,7 @@ public class TaqvimHome extends FrameLayout {
     public static final int PAGE_TASBEH = 3;
     public static final int PAGE_CALC = 4;
     public static final int PAGE_TABRIK = 6;
+    public static final int PAGE_TAKLIF = 7;
 
     private final int textColor;
     private final int accent;
@@ -221,6 +222,15 @@ public class TaqvimHome extends FrameLayout {
                 t("8 turkum", "8 категорий", "8 categories"), -1,
                 0xFFB078E0, 0xFF8A5BD6, PAGE_TABRIK), tileLp(2));
         addRow(row2);
+
+        LinearLayout row3 = new LinearLayout(ctx);
+        row3.setOrientation(LinearLayout.HORIZONTAL);
+        row3.addView(tile(ctx, 6, t("Taklifnoma", "Приглашения", "Invitations"),
+                t("To'y, yubiley", "Свадьба, юбилей", "Wedding, jubilee"), -1,
+                0xFF2F5D8C, 0xFF1D3A5F, PAGE_TAKLIF), tileLp(0));
+        row3.addView(new android.view.View(ctx), tileLp(1));
+        row3.addView(new android.view.View(ctx), tileLp(2));
+        addRow(row3);
 
         // ad card (hidden when there are no ads)
         LinearLayout.LayoutParams adLp = new LinearLayout.LayoutParams(
@@ -556,6 +566,15 @@ public class TaqvimHome extends FrameLayout {
                     c.drawLine(12f * u, 17.5f * u, 12f * u, 20f * u, stroke);
                     c.drawLine(4f * u, 12f * u, 6.5f * u, 12f * u, stroke);
                     c.drawLine(17.5f * u, 12f * u, 20f * u, 12f * u, stroke);
+                    break;
+                case 6: // envelope
+                    rect.set(3.5f * u, 6f * u, 20.5f * u, 18.5f * u);
+                    c.drawRoundRect(rect, 3f * u, 3f * u, stroke);
+                    path.reset();
+                    path.moveTo(4.5f * u, 8f * u);
+                    path.lineTo(12f * u, 13.5f * u);
+                    path.lineTo(19.5f * u, 8f * u);
+                    c.drawPath(path, stroke);
                     break;
                 case 5: // gift
                     rect.set(4f * u, 11f * u, 20f * u, 21f * u);
