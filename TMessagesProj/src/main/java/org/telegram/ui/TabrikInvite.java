@@ -52,7 +52,7 @@ final class TabrikInvite {
     }
 
     // the coordinates are in a 720 x 960 card
-    private static final Slot[][] SLOTS = {
+    private static final Slot[][] BASE_SLOTS = {
             // 0 wedding: name, invitation, date, place, address
             {
                     new Slot(360, 594, 84, 640, 1, 0xFFE6B65C, ITALIC),
@@ -86,31 +86,93 @@ final class TabrikInvite {
             }
     };
 
-    private static final int[][][] COLORS = {
+    /** The text places of every card (the first card of each kind uses the base places). */
+    private static final Slot[][] SLOTS = {
+            BASE_SLOTS[0],
             {
-                    {0xFFE6B65C, 0xFFF7EFE0, 0xFFF7EFE0, 0xFFF7EFE0, 0xFFC9B48A},
-                    {0xFF5BD0E6, 0xFFE0F3F7, 0xFFE0F3F7, 0xFFE0F3F7, 0xFF8ABEC9},
-                    {0xFFE65587, 0xFFF7DEE7, 0xFFF7DEE7, 0xFFF7DEE7, 0xFFC9869C},
-                    {0xFF69E687, 0xFFE2F7E7, 0xFFE2F7E7, 0xFFE2F7E7, 0xFF90C99E},
+                    new Slot(360, 400, 78, 560, 1, 0xFF8A6420, ITALIC),
+                    new Slot(360, 480, 26, 500, 3, 0xFF4A3B2A, SERIF),
+                    new Slot(360, 672, 38, 460, 1, 0xFF4A3B2A, SERIF),
+                    new Slot(360, 744, 34, 560, 1, 0xFF8A6420, ITALIC),
+                    new Slot(360, 776, 19, 560, 1, 0xFF7A6A52, SANS)
             },
             {
-                    {0xFF15110F, 0xFF3A322D, 0xFF15110F, 0xFF3A322D, 0xFF3A322D},
-                    {0xFF0F1515, 0xFF2D393A, 0xFF0F1515, 0xFF2D393A, 0xFF2D393A},
-                    {0xFF150F11, 0xFF3A2D30, 0xFF150F11, 0xFF3A2D30, 0xFF3A2D30},
-                    {0xFF12150F, 0xFF323A2D, 0xFF12150F, 0xFF323A2D, 0xFF323A2D},
+                    new Slot(360, 410, 78, 420, 1, 0xFFD8B25E, ITALIC),
+                    new Slot(360, 490, 26, 400, 3, 0xFFF3EBDA, SERIF),
+                    new Slot(360, 690, 38, 420, 1, 0xFFF3EBDA, SERIF),
+                    new Slot(360, 758, 34, 420, 1, 0xFFD8B25E, ITALIC),
+                    new Slot(360, 794, 19, 420, 1, 0xFFC9B48A, SANS)
             },
             {
-                    {0xFF7A4F33, 0xFF7A4F33, 0xFF7A4F33, 0xFF9A7A5C},
-                    {0xFF337A72, 0xFF337A72, 0xFF337A72, 0xFF5B9A99},
-                    {0xFF7A3369, 0xFF7A3369, 0xFF7A3369, 0xFF9A5B86},
-                    {0xFF2D7A2B, 0xFF2D7A2B, 0xFF2D7A2B, 0xFF559A5A},
+                    new Slot(360, 450, 78, 520, 1, 0xFFB5545F, ITALIC),
+                    new Slot(360, 530, 26, 480, 3, 0xFF5A3B3F, SERIF),
+                    new Slot(360, 690, 38, 460, 1, 0xFF5A3B3F, SERIF),
+                    new Slot(360, 758, 34, 520, 1, 0xFFB5545F, ITALIC),
+                    new Slot(360, 796, 19, 520, 1, 0xFF8A6A6D, SANS)
+            },
+            BASE_SLOTS[1],
+            {
+                    new Slot(360, 420, 62, 520, 2, 0xFFF7EBC8, ITALIC),
+                    new Slot(360, 540, 24, 480, 3, 0xFFE7C566, SERIF),
+                    new Slot(360, 628, 44, 460, 1, 0xFFF7EBC8, SERIF),
+                    new Slot(360, 666, 24, 520, 1, 0xFFE7C566, SERIF),
+                    new Slot(360, 692, 17, 520, 1, 0xFFB9B089, SANS)
             },
             {
-                    {0xFFEBB7A0, 0xFFF7ECE4, 0xFFF7ECE4, 0xFFE8B49A, 0xFFF7ECE4},
-                    {0xFFA0EBB7, 0xFFE4F7EC, 0xFFE4F7EC, 0xFF9AE8B4, 0xFFE4F7EC},
-                    {0xFFCFA0EB, 0xFFF2E4F7, 0xFFF2E4F7, 0xFFCE9AE8, 0xFFF2E4F7},
-                    {0xFFA0C7EB, 0xFFE4EBF7, 0xFFE4EBF7, 0xFF9AC1E8, 0xFFE4EBF7},
+                    new Slot(360, 440, 62, 380, 2, 0xFF0E5A45, ITALIC),
+                    new Slot(360, 566, 24, 380, 3, 0xFF3A4A40, SERIF),
+                    new Slot(360, 690, 44, 380, 1, 0xFF0E5A45, SERIF),
+                    new Slot(360, 736, 26, 380, 1, 0xFF3A4A40, SERIF),
+                    new Slot(360, 768, 18, 380, 1, 0xFF6A6A5A, SANS)
             },
+            {
+                    new Slot(360, 420, 62, 360, 2, 0xFF1F6FA8, ITALIC),
+                    new Slot(360, 550, 24, 360, 3, 0xFF35566E, SERIF),
+                    new Slot(360, 700, 44, 360, 1, 0xFF1F6FA8, SERIF),
+                    new Slot(360, 748, 26, 360, 1, 0xFF35566E, SERIF),
+                    new Slot(360, 782, 18, 360, 1, 0xFF5A7A90, SANS)
+            },
+            BASE_SLOTS[2],
+            {
+                    new Slot(360, 420, 27, 520, 3, 0xFF54428F, SERIF),
+                    new Slot(360, 620, 44, 460, 1, 0xFF6A4FB0, BOLD),
+                    new Slot(360, 700, 32, 560, 1, 0xFF54428F, BOLD),
+                    new Slot(360, 744, 19, 560, 1, 0xFF8A78B8, SANS)
+            },
+            {
+                    new Slot(360, 545, 27, 520, 3, 0xFFA8654A, SERIF),
+                    new Slot(360, 690, 42, 460, 1, 0xFFB9785A, BOLD),
+                    new Slot(360, 758, 32, 560, 1, 0xFFA8654A, BOLD),
+                    new Slot(360, 796, 19, 560, 1, 0xFFC09A86, SANS)
+            },
+            {
+                    new Slot(360, 408, 27, 520, 3, 0xFF2F7A63, SERIF),
+                    new Slot(360, 610, 44, 460, 1, 0xFF3E8A72, BOLD),
+                    new Slot(360, 690, 32, 560, 1, 0xFF2F7A63, BOLD),
+                    new Slot(360, 730, 19, 560, 1, 0xFF6AA58F, SANS)
+            },
+            BASE_SLOTS[3],
+            {
+                    new Slot(360, 480, 170, 300, 1, 0xFFE2BF63, SERIF),
+                    new Slot(360, 560, 50, 580, 1, 0xFFF6EAD0, ITALIC),
+                    new Slot(360, 612, 22, 540, 2, 0xFFF6EAD0, SERIF),
+                    new Slot(360, 730, 38, 560, 1, 0xFFE2BF63, SERIF),
+                    new Slot(360, 782, 22, 560, 1, 0xFFC9B48A, SANS)
+            },
+            {
+                    new Slot(360, 470, 170, 300, 1, 0xFF17304F, SERIF),
+                    new Slot(360, 550, 50, 580, 1, 0xFFB58A3A, ITALIC),
+                    new Slot(360, 604, 22, 540, 2, 0xFF3A3A3A, SERIF),
+                    new Slot(360, 730, 38, 560, 1, 0xFF17304F, SERIF),
+                    new Slot(360, 782, 22, 560, 1, 0xFF6A5A3A, SANS)
+            },
+            {
+                    new Slot(360, 520, 170, 300, 1, 0xFFE2BF63, SERIF),
+                    new Slot(360, 600, 50, 580, 1, 0xFFF6EAD0, ITALIC),
+                    new Slot(360, 650, 22, 540, 2, 0xFFF6EAD0, SERIF),
+                    new Slot(360, 742, 38, 560, 1, 0xFFE2BF63, SERIF),
+                    new Slot(360, 800, 22, 560, 1, 0xFFE8D5A0, SANS)
+            }
     };
 
     private static final Bitmap[] BACKGROUNDS = new Bitmap[BASES.length * VARIANTS];
@@ -205,7 +267,7 @@ final class TabrikInvite {
 
         final String text = body == null ? "" : body;
         final int visible = reveal < 0 ? Integer.MAX_VALUE : reveal;
-        final Slot[] slots = SLOTS[design / VARIANTS];
+        final Slot[] slots = SLOTS[design];
         final float k = w / 720f;
         c.save();
         c.scale(k, k);
@@ -236,7 +298,7 @@ final class TabrikInvite {
             return;
         }
         final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(COLORS[design / VARIANTS][design % VARIANTS][slotIndex]);
+        paint.setColor(slot.color);
         paint.setTypeface(typeface(slot.style));
         final float size = fit(design, slotIndex, line, slot, paint);
         paint.setTextSize(size);
