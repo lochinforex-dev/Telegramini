@@ -235,7 +235,7 @@ public class TaqvimHome extends FrameLayout {
         // ad card (hidden when there are no ads)
         LinearLayout.LayoutParams adLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        adLp.topMargin = dp(14);
+        adLp.topMargin = dp(10);
         if (adCard == null) {
             adCard = new org.telegram.ui.Cells.AdCardCell(ctx, cardColor, textColor);
         }
@@ -243,7 +243,7 @@ public class TaqvimHome extends FrameLayout {
     }
 
     private LinearLayout.LayoutParams tileLp(int column) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(132), 1f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(104), 1f);
         lp.leftMargin = column == 0 ? 0 : dp(4);
         lp.rightMargin = column == 2 ? 0 : dp(4);
         return lp;
@@ -323,7 +323,7 @@ public class TaqvimHome extends FrameLayout {
     private void addRow(LinearLayout row) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(12);
+        lp.topMargin = dp(8);
         root.addView(row, lp);
     }
 
@@ -332,7 +332,7 @@ public class TaqvimHome extends FrameLayout {
     private View buildTodayCard(Context ctx) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(20), dp(16), dp(20), dp(16));
+        card.setPadding(dp(18), dp(8), dp(18), dp(10));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(cardColor);
         bg.setStroke(dp(1), ColorUtils.setAlphaComponent(textColor, 28));
@@ -368,7 +368,7 @@ public class TaqvimHome extends FrameLayout {
         TextView date = new TextView(ctx);
         String ds = new SimpleDateFormat("d-MMMM", locale).format(now.getTime());
         date.setText(ds);
-        date.setTextSize(34);
+        date.setTextSize(24);
         date.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD));
         date.setTextColor(textColor);
         LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(

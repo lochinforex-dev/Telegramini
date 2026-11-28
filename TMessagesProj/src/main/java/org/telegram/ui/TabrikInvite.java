@@ -29,7 +29,9 @@ final class TabrikInvite {
     /** Scene numbers of the invitation designs (the usual animated scenes use 1..8). */
     static final int FIRST_SCENE = 21;
 
-    private static final String[] FILES = {"toy.jpg", "sunnat.jpg", "beshik.jpg", "yubiley.jpg"};
+    /** Cards of every kind: the first picture and its colour variants (toy.jpg, toy2.jpg, ...). */
+    static final int VARIANTS = 4;
+    private static final String[] BASES = {"toy", "sunnat", "beshik", "yubiley"};
 
     // text styles
     private static final int ITALIC = 0, SERIF = 1, BOLD = 2, SANS = 3;
@@ -84,7 +86,34 @@ final class TabrikInvite {
             }
     };
 
-    private static final Bitmap[] BACKGROUNDS = new Bitmap[FILES.length];
+    private static final int[][][] COLORS = {
+            {
+                    {0xFFE6B65C, 0xFFF7EFE0, 0xFFF7EFE0, 0xFFF7EFE0, 0xFFC9B48A},
+                    {0xFF5BD0E6, 0xFFE0F3F7, 0xFFE0F3F7, 0xFFE0F3F7, 0xFF8ABEC9},
+                    {0xFFE65587, 0xFFF7DEE7, 0xFFF7DEE7, 0xFFF7DEE7, 0xFFC9869C},
+                    {0xFF69E687, 0xFFE2F7E7, 0xFFE2F7E7, 0xFFE2F7E7, 0xFF90C99E},
+            },
+            {
+                    {0xFF15110F, 0xFF3A322D, 0xFF15110F, 0xFF3A322D, 0xFF3A322D},
+                    {0xFF0F1515, 0xFF2D393A, 0xFF0F1515, 0xFF2D393A, 0xFF2D393A},
+                    {0xFF150F11, 0xFF3A2D30, 0xFF150F11, 0xFF3A2D30, 0xFF3A2D30},
+                    {0xFF12150F, 0xFF323A2D, 0xFF12150F, 0xFF323A2D, 0xFF323A2D},
+            },
+            {
+                    {0xFF7A4F33, 0xFF7A4F33, 0xFF7A4F33, 0xFF9A7A5C},
+                    {0xFF337A72, 0xFF337A72, 0xFF337A72, 0xFF5B9A99},
+                    {0xFF7A3369, 0xFF7A3369, 0xFF7A3369, 0xFF9A5B86},
+                    {0xFF2D7A2B, 0xFF2D7A2B, 0xFF2D7A2B, 0xFF559A5A},
+            },
+            {
+                    {0xFFEBB7A0, 0xFFF7ECE4, 0xFFF7ECE4, 0xFFE8B49A, 0xFFF7ECE4},
+                    {0xFFA0EBB7, 0xFFE4F7EC, 0xFFE4F7EC, 0xFF9AE8B4, 0xFFE4F7EC},
+                    {0xFFCFA0EB, 0xFFF2E4F7, 0xFFF2E4F7, 0xFFCE9AE8, 0xFFF2E4F7},
+                    {0xFFA0C7EB, 0xFFE4EBF7, 0xFFE4EBF7, 0xFF9AC1E8, 0xFFE4EBF7},
+            },
+    };
+
+    private static final Bitmap[] BACKGROUNDS = new Bitmap[BASES.length * VARIANTS];
     private static final Paint BG_PAINT = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
     private static final HashMap<String, Float> FIT = new HashMap<>();
 
@@ -95,7 +124,7 @@ final class TabrikInvite {
         if (BACKGROUNDS[index] != null) {
             return BACKGROUNDS[index];
         }
-        try (InputStream in = ApplicationLoader.applicationContext.getAssets().open("taklif/" + FILES[index])) {
+        try (InputStream in = ApplicationLoader.applicationContext.getAssets().open("taklif/" + BASES[index / VARIANTS] + (index % VARIANTS == 0 ? "" : String.valueOf(index % VARIANTS + 1)) + ".jpg")) {
             final BitmapFactory.Options o = new BitmapFactory.Options();
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
             BACKGROUNDS[index] = BitmapFactory.decodeStream(in, null, o);
@@ -163,7 +192,7 @@ final class TabrikInvite {
      * @return 1 (the card has no text size to remember)
      */
     static float draw(Canvas c, float w, float h, int scene, String body, int reveal, TabrikCards.Overlay behind) {
-        final int design = Math.max(0, Math.min(SLOTS.length - 1, scene - FIRST_SCENE));
+        final int design = Math.max(0, Math.min(BASES.length * VARIANTS - 1, scene - FIRST_SCENE));
         final Bitmap bmp = background(design);
         if (bmp != null) {
             c.drawBitmap(bmp, null, new RectF(0, 0, w, h), BG_PAINT);
@@ -176,7 +205,7 @@ final class TabrikInvite {
 
         final String text = body == null ? "" : body;
         final int visible = reveal < 0 ? Integer.MAX_VALUE : reveal;
-        final Slot[] slots = SLOTS[design];
+        final Slot[] slots = SLOTS[design / VARIANTS];
         final float k = w / 720f;
         c.save();
         c.scale(k, k);
@@ -207,7 +236,7 @@ final class TabrikInvite {
             return;
         }
         final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(slot.color);
+        paint.setColor(COLORS[design / VARIANTS][design % VARIANTS][slotIndex]);
         paint.setTypeface(typeface(slot.style));
         final float size = fit(design, slotIndex, line, slot, paint);
         paint.setTextSize(size);

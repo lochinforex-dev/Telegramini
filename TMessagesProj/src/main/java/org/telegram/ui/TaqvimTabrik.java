@@ -252,7 +252,7 @@ public class TaqvimTabrik extends FrameLayout {
                 cell.setOrientation(LinearLayout.VERTICAL);
                 TabrikView tv = new TabrikView(ctx);
                 tv.set(list[idx], -1, TabrikCards.title(category),
-                        TabrikCards.template(category, TabrikCards.isInvitation(category) ? idx : 2, ""), "");
+                        TabrikCards.template(category, TabrikCards.isInvitation(category) ? idx / TabrikInvite.VARIANTS : 2, ""), "");
                 cell.addView(tv, new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 TextView name = new TextView(ctx);
@@ -379,7 +379,7 @@ public class TaqvimTabrik extends FrameLayout {
         level = 2;
         designIndex = index;
         tint = -1;
-        tpl = TabrikCards.isInvitation(cat) ? index : 0;
+        tpl = TabrikCards.isInvitation(cat) ? index / TabrikInvite.VARIANTS : 0;
         fxIndex = TabrikGif.defaultEffect(cat);
         fxChips.clear();
         variantChips.clear();
@@ -416,7 +416,7 @@ public class TaqvimTabrik extends FrameLayout {
             chip.setOnClickListener(v -> {
                 tpl = ti;
                 if (TabrikCards.isInvitation(cat)) {
-                    designIndex = ti;
+                    designIndex = ti * TabrikInvite.VARIANTS + designIndex % TabrikInvite.VARIANTS;
                 }
                 bodyEdited = false;
                 setBody(TabrikCards.template(cat, tpl, toName));

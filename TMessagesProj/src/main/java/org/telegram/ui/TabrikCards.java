@@ -295,12 +295,7 @@ public final class TabrikCards {
                     dz("Kulrang", 0xFF3A4668, 0xFF232C47, 1, D_NONE, I_SHIELD, 0xFFF2D27A, 0xFFFFFFFF, 0, B_NONE)
             }),
             // ---------------- Taklifnoma ----------------
-            new Cat("Taklifnoma", "", 0xFF1D3A8A, 0xFFD9A441, NAMES_INVITE, BODIES_INVITE, new Design[]{
-                    sc("Nikoh to'yi", 0xFF14285C, 0xFF14285C, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE),
-                    sc("Sunnat to'yi", 0xFF15110F, 0xFF15110F, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE + 1),
-                    sc("Beshik to'yi", 0xFFF3E4D3, 0xFFF3E4D3, 0, 0xFF7A4F33, TabrikInvite.FIRST_SCENE + 2),
-                    sc("Yubiley", 0xFF3A0F2E, 0xFF3A0F2E, 0, 0xFFFFFFFF, TabrikInvite.FIRST_SCENE + 3)
-            })
+            new Cat("Taklifnoma", "", 0xFF1D3A8A, 0xFFD9A441, NAMES_INVITE, BODIES_INVITE, inviteDesigns())
     };
 
     private TabrikCards() {
@@ -324,6 +319,18 @@ public final class TabrikCards {
 
     public static Design[] designs(int cat) {
         return CATS[safe(cat)].designs;
+    }
+
+    private static Design[] inviteDesigns() {
+        final int n = TabrikInvite.VARIANTS;
+        final Design[] list = new Design[NAMES_INVITE.length * n];
+        for (int t = 0; t < NAMES_INVITE.length; t++) {
+            for (int v = 0; v < n; v++) {
+                list[t * n + v] = sc(NAMES_INVITE[t] + " " + (v + 1), 0xFF14285C, 0xFF14285C, 0, 0xFFFFFFFF,
+                        TabrikInvite.FIRST_SCENE + t * n + v);
+            }
+        }
+        return list;
     }
 
     /** Index of the invitation category (it has its own page in Kundalik). */

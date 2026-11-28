@@ -45,8 +45,35 @@ public class PrivateAdGate {
             onDone.run();
             return;
         }
-        // wait (up to 3 seconds) for the ad list, so the first opening after a cold start also shows an ad
+        // show a small "loading" window at once, so the person sees that something is happening
+        final AlertDialog.Builder loadingBuilder = new AlertDialog.Builder(context);
+        loadingBuilder.setTitle("Maxfiy chatlar");
+        loadingBuilder.setMessage("Reklama videosi yuklanmoqda, iltimos kuting...\nReklama 3 kunda bir marta ko'rsatiladi.");
+        final AlertDialog loading = loadingBuilder.create();
+        loading.setCanceledOnTouchOutside(false);
+        try {
+            loading.show();
+        } catch (Throwable ignore) {
+        }
+        final boolean[] resolved = {false};
+        final Runnable closeLoading = () -> {
+            try {
+                loading.dismiss();
+            } catch (Throwable ignore) {
+            }
+        };
+        // never keep the person waiting: if no ad is ready in 7 seconds, the chats open (and the next time asks again)
+        AndroidUtilities.runOnUIThread(() -> {
+            if (!resolved[0]) {
+                resolved[0] = true;
+                closeLoading.run();
+                onDone.run();
+            }
+        }, 7000);
         AdBannerController.getInstance().whenReady(() -> {
+            if (resolved[0]) {
+                return;
+            }
             AdBannerController ads = AdBannerController.getInstance();
             List<AdBannerController.Ad> pool = ads.getVideoAds();
             if (pool == null || pool.isEmpty()) {
@@ -56,22 +83,46 @@ public class PrivateAdGate {
                 // no own ad: Google rewarded video (the user chooses to watch), then a banner, and never block the user
                 final android.app.Activity activity = AndroidUtilities.findActivity(context);
                 if (activity == null) {
+                    resolved[0] = true;
+                    closeLoading.run();
                     onDone.run();
                     return;
                 }
                 org.telegram.messenger.AdMobHelper.loadRewarded(activity, new org.telegram.messenger.AdMobHelper.RewardedCallback() {
                     @Override
                     public void onLoaded(com.google.android.gms.ads.rewarded.RewardedAd rewardedAd) {
+                        if (resolved[0]) {
+                            return;
+                        }
+                        resolved[0] = true;
+                        closeLoading.run();
                         askToWatch(activity, rewardedAd, onDone);
                     }
 
                     @Override
                     public void onFailed() {
-                        showGoogleBanner(activity, onDone);
+                        if (resolved[0]) {
+                            return;
+                        }
+                        final boolean[] shown = {false};
+                        showGoogleBanner(activity, () -> {
+                            // the banner window was shown and closed by the person, or the banner could not load
+                            if (shown[0] || !resolved[0]) {
+                                resolved[0] = true;
+                                closeLoading.run();
+                                onDone.run();
+                            }
+                        }, () -> {
+                            shown[0] = true;
+                            resolved[0] = true;
+                            closeLoading.run();
+                        });
                     }
                 });
                 return;
             }
+            resolved[0] = true;
+            closeLoading.run();
             show(context, pool.get(new Random().nextInt(pool.size())), null, onDone);
         }, 1500);
     }
@@ -89,11 +140,12 @@ public class PrivateAdGate {
         builder.create().show();
     }
 
-    private static void showGoogleBanner(final android.app.Activity activity, final Runnable onDone) {
+    private static void showGoogleBanner(final android.app.Activity activity, final Runnable onDone, final Runnable onShown) {
         int widthDp = (int) Math.min(300, AndroidUtilities.displaySize.x / AndroidUtilities.density - 48 - 44);
         org.telegram.messenger.AdMobHelper.loadGateBanner(activity, widthDp, new org.telegram.messenger.AdMobHelper.GateCallback() {
             @Override
             public void onLoaded(com.google.android.gms.ads.AdView view) {
+                onShown.run();
                 show(activity, null, view, onDone);
             }
 
